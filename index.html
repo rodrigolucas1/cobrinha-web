@@ -306,7 +306,7 @@ const COR_CABECA_P2 = "#2962ff";
 const COR_CABECA_CYBORG = "#cfd8dc";
 
 const DIFICULDADES = {
-  "Facil":   { velocidade: 170, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 8 },
+  "Facil":   { velocidade: 200, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 8 },
   "Media":   { velocidade: 140, parede: 6,  gaviao: 10, escorpiao: 14, dragao: 18, especial: 0.30, gaviao_intervalo: 6 },
   "Dificil": { velocidade: 105, parede: 4,  gaviao: 7,  escorpiao: 10, dragao: 13, especial: 0.40, gaviao_intervalo: 5 },
 };
@@ -594,7 +594,6 @@ const FRUTAS = [
   { nome: "Pessego",    pontos: 50,  crescimento: 2, cor: "#ffcc80", especial: null,      desenhar: desenharPessego },
   { nome: "Abacaxi",    pontos: 60,  crescimento: 2, cor: "#fdd835", especial: null,      desenhar: desenharAbacaxi },
   { nome: "Bonus Dourado", pontos: 150, crescimento: 1, cor: "#ffd600", especial: "bonus",   desenhar: desenharEstrela },
-  { nome: "Veneno",     pontos: -50, crescimento: 0, cor: "#7e57c2", especial: "veneno",   desenhar: desenharVeneno },
   { nome: "Coracao",    pontos: 0,   crescimento: 0, cor: "#ef5350", especial: "coracao",  desenhar: desenharCoracao },
   { nome: "Master",     pontos: 100, crescimento: 0, cor: "#fbbf24", especial: "master",   desenhar: desenharMaster },
 ];
@@ -603,7 +602,6 @@ const INDICES_NORMAIS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 function descricaoFruta(indice) {
   const f = FRUTAS[indice];
   if (f.especial === "bonus") return "Bonus +150";
-  if (f.especial === "veneno") return "Veneno";
   if (f.especial === "coracao") return "Coracao +vida";
   if (f.especial === "master") return "Master (afasta o gaviao)";
   return f.nome + "(+" + f.pontos + ")";
@@ -705,7 +703,7 @@ function pousarFrutas() {
     const pos = livres[Math.floor(Math.random() * livres.length)];
     const prob = DIFICULDADES[J.dificuldade].especial;
     let indice;
-    if (Math.random() < prob) indice = 10 + Math.floor(Math.random() * 3);
+    if (Math.random() < prob) indice = 10 + Math.floor(Math.random() * 2);
     else indice = INDICES_NORMAIS[Math.floor(Math.random() * INDICES_NORMAIS.length)];
     J.frutas.push({ pos: pos, indice: indice });
   }
@@ -784,8 +782,6 @@ function atualizarObstaculos() {
     if (J.gaviao_espera > 0) J.gaviao_espera -= 1;
     else criarGaviao();
   }
-  if (!J.escorpiao && tam >= dif.escorpiao) criarEscorpiao();
-  if (!J.dragaoCorpo.length && tam >= dif.dragao) criarDragao();
 }
 function cabecaMaisProxima(origem) {
   let alvo = null, menor = null;
@@ -822,8 +818,7 @@ function celulaSeguraIA(pos, jogador) {
 }
 function moverIA(jogador) {
   const cabeca = jogador.corpo[0];
-  let grupo = J.frutas.filter(f => FRUTAS[f.indice].especial !== "veneno");
-  if (!grupo.length) grupo = J.frutas;
+  let grupo = J.frutas;
   let alvo = null;
   if (grupo.length) {
     let menor = null;
@@ -1052,12 +1047,6 @@ function comerFruta(jogador, i) {
     jogador.pontos += 150; jogador.crescer += 1;
     J.mensagem = jogador.nome + " achou o BONUS DOURADO! +150";
     somBonus();
-  } else if (fruta.especial === "veneno") {
-    jogador.pontos -= 50;
-    J.mensagem = jogador.nome + " comeu VENENO! -50";
-    somVeneno();
-    if (jogador.corpo.length <= 3) matarSnake(jogador, "morreu de tanto veneno");
-    else { jogador.corpo.pop(); jogador.corpo.pop(); }
   } else if (fruta.especial === "coracao") {
     jogador.vidas = Math.min(jogador.vidas + 1, 5);
     J.mensagem = jogador.nome + " ganhou +1 VIDA!";
