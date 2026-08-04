@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jogo da Cobrinha - Versão Web</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: #0f172a;
+    color: #ffffff;
+    font-family: "Segoe UI", Arial, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #tela-menu {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  #caixa-menu {
+    background: #0f172a;
+    border: 2px solid #fbbf24;
+    border-radius: 14px;
+    padding: 22px 26px;
+    width: 100%;
+    max-width: 480px;
+  }
+  #caixa-menu h1 {
+    color: #4ade80;
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 2px;
+  }
+  #caixa-menu .sub {
+    color: #94a3b8;
+    text-align: center;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .rotulo {
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 13px;
+    margin: 8px 0 4px;
+  }
+  .linha-opcoes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .opcao {
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 6px 12px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .opcao.sel { background: #16a34a; border-color: #16a34a; color: #06280f; font-weight: bold; }
+  .entrada {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .linha-check { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 14px; }
+  .btn-jogar {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: #22c55e;
+    color: #06280f;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .btn-jogar:active { transform: scale(0.98); }
+  .ajuda { color: #94a3b8; font-size: 11px; text-align: center; margin-top: 10px; line-height: 1.5; }
+  #quadro-recordes {
+    border: 1px solid #16a34a;
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-top: 12px;
+  }
+  #quadro-recordes .titulo { color: #4ade80; font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+  #lista-recordes { color: #94a3b8; font-size: 12px; line-height: 1.6; min-height: 20px; }
+  .btn-limpar {
+    margin-top: 6px;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #tela-jogo {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  #hud {
+    background: #0f172a;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 6px 12px;
+    border-bottom: 1px solid #1e293b;
+    min-height: 40px;
+  }
+  #hud .titulo { color: #4ade80; font-weight: bold; font-size: 13px; }
+  #hud .jog { font-weight: bold; font-size: 13px; }
+  #hud .frutas { color: #fbbf24; font-size: 11px; text-align: right; }
+  #hud .obs { color: #ef4444; font-size: 11px; font-weight: bold; }
+  #mensagem { color: #4ade80; font-weight: bold; font-size: 13px; padding: 4px 12px; text-align: center; min-height: 20px; background: #0f172a; }
+  #area-canvas {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 8px;
+  }
+  canvas {
+    background: #0f172a;
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+  }
+  #dpads {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px; pointer-events: auto; }
+  .dpad button {
+    border: none;
+    border-radius: 8px;
+    background: rgba(30,41,59,0.85);
+    color: #e2e8f0;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .dpad button:active { background: #16a34a; }
+  .b-vazio { visibility: hidden; }
+  #joystick {
+    position: fixed;
+    width: 120px; height: 120px;
+    pointer-events: none;
+    z-index: 30;
+    transform: translate(-50%, -50%);
+  }
+  #joy-base {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 3px solid rgba(34,197,94,0.85);
+    background: rgba(15,23,42,0.45);
+    box-shadow: 0 0 18px rgba(34,197,94,0.35);
+  }
+  #joy-knob {
+    position: absolute;
+    width: 54px; height: 54px;
+    left: 33px; top: 33px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #4ade80, #16a34a);
+    box-shadow: 0 0 14px rgba(34,197,94,0.7);
+  }
+  #dica-toque {
+    position: fixed;
+    bottom: 78px; left: 0; right: 0;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 25;
+    padding: 4px;
+    background: rgba(15,23,42,0.75);
+  }
+  #rodape { display: flex; justify-content: space-between; padding: 2px 10px; font-size: 10px; color: #64748b; }
+</style>
+</head>
+<body>
+
+<div id="tela-menu">
+  <div id="caixa-menu">
+    <h1>JOGO DA COBRINHA</h1>
+    <div class="sub">Versão Web - recordes, IA, obstáculos e muito mais</div>
+
+    <div class="rotulo">Modo de jogo</div>
+    <div class="linha-opcoes" id="opcoes-modo"></div>
+
+    <div class="rotulo">Dificuldade</div>
+    <div class="linha-opcoes" id="opcoes-dificuldade"></div>
+
+    <div class="rotulo" id="rotulo-nome1">Nome do Jogador</div>
+    <input id="nome1" class="entrada" value="Jogador 1" maxlength="14">
+
+    <div class="rotulo" id="rotulo-nome2" style="display:none">Nome do Jogador 2</div>
+    <input id="nome2" class="entrada" style="display:none" value="Jogador 2" maxlength="14">
+
+    <div class="linha-check">
+      <input type="checkbox" id="ck-som" checked>
+      <label for="ck-som">Ativar som</label>
+    </div>
+
+    <button class="btn-jogar" id="btn-jogar">JOGAR</button>
+
+    <div class="ajuda">
+      Controles: P1 = WASD / swipes &nbsp;|&nbsp; P2 = Setas<br>
+      P = pausar &nbsp;|&nbsp; R = reiniciar &nbsp;|&nbsp; M = menu &nbsp;|&nbsp; S = som<br>
+      No celular, use os botões de direção na parte de baixo da tela.
+    </div>
+
+    <div id="quadro-recordes">
+      <div class="titulo">Recordes</div>
+      <div id="lista-recordes"></div>
+      <button class="btn-limpar" id="btn-limpar">Limpar Score</button>
+    </div>
+  </div>
+</div>
+
+<div id="tela-jogo" style="display:none">
+  <div id="hud">
+    <span class="titulo">JOGO DA COBRINHA</span>
+    <span id="hud-jogadores"></span>
+    <span class="frutas" id="hud-frutas"></span>
+    <span class="obs" id="hud-obs"></span>
+  </div>
+  <div id="mensagem"></div>
+  <div id="area-canvas">
+    <canvas id="canvas" width="600" height="600"></canvas>
+  </div>
+  <div id="dpads">
+    <div class="dpad" id="dpad1"></div>
+    <div class="dpad" id="dpad2"></div>
+  </div>
+  <div id="joystick" style="display:none">
+    <div id="joy-base"></div>
+    <div id="joy-knob"></div>
+  </div>
+  <div id="dica-toque">Toque e arraste para controlar</div>
+  <div id="rodape"><span id="rodape-esq"></span><span id="rodape-dir"></span></div>
+</div>
+
+<script>
+"use strict";
+
+// ---------- Constantes ----------
+const CELL = 30, LINHAS = 20, COLUNAS = 20, LARGURA = 600, ALTURA = 600;
+const COR_FUNDO = "#0f172a", COR_GRADE = "#1e293b", COR_BRANCO = "#ffffff";
+
+const PALETA_P1 = ["#ff1744", "#ff9100", "#ffd600", "#00e676", "#00b0ff", "#651fff"];
+const PALETA_P2 = ["#90caf9", "#42a5f5", "#1565c0", "#283593", "#0d47a1", "#4fc3f7"];
+const PALETA_CYBORG = ["#9e9e9e", "#616161", "#424242", "#212121", "#757575", "#37474f"];
+const COR_CABECA_P1 = "#00c853";
+const COR_CABECA_P2 = "#2962ff";
+const COR_CABECA_CYBORG = "#cfd8dc";
+
+const DIFICULDADES = {
+  "Facil":   { velocidade: 170, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 4 },
+  "Media":   { velocidade: 140, parede: 6,  gaviao: 10, escorpiao: 14, dragao: 18, especial: 0.30, gaviao_intervalo: 3 },
+  "Dificil": { velocidade: 105, parede: 4,  gaviao: 7,  escorpiao: 10, dragao: 13, especial: 0.40, gaviao_intervalo: 2 },
+};
+
+const MODOS = [
+  { chave: "1jogador",  texto: "1 Jogador" },
+  { chave: "2jogadores", texto: "2 Jogadores" },
+  { chave: "vs_cyborg", texto: "Vs Cyborgue" },
+];
+
+// ---------- Sons (Web Audio) ----------
+let audioCtx = null;
+let somAtivado = true;
+function criarAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+function beep(freq, dur) {
+  if (!somAtivado || !audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "square";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur / 1000);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + dur / 1000);
+}
+let musicaTimer = null, musicaPasso = 0;
+function tocarMusica() {
+  if (!somAtivado || !audioCtx) return;
+  const notas = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 261.63, 196.00,
+                 220.00, 261.63, 329.63, 392.00, 329.63, 392.00, 523.25, 440.00];
+  musicaPasso = 0;
+  if (musicaTimer) clearInterval(musicaTimer);
+  musicaTimer = setInterval(() => {
+    if (!somAtivado || !audioCtx) return;
+    beep(notas[musicaPasso], 220);
+    musicaPasso = (musicaPasso + 1) % notas.length;
+  }, 300);
+}
+function pararMusica() { if (musicaTimer) { clearInterval(musicaTimer); musicaTimer = null; } }
+function somComer() { beep(880, 60); }
+function somBonus() { beep(1100, 70); setTimeout(() => beep(1320, 70), 90); }
+function somVeneno() { beep(180, 120); }
+function somCoracao() { beep(660, 80); setTimeout(() => beep(990, 90), 100); }
+function somMorte() { beep(220, 200); setTimeout(() => beep(150, 250), 230); }
+function somVitoria() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 100), i * 110)); }
+
+// ---------- Frutas ----------
+function desenharMaca(ctx, x, y) {
+  ctx.fillStyle = "#e53935"; ctx.strokeStyle = "#b71c1c";
+  ctx.beginPath(); ctx.arc(x + 15, y + 17, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 15, y + 7); ctx.lineTo(x + 16, y + 2); ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#43a047";
+  ctx.beginPath(); ctx.ellipse(x + 17.5, y + 3, 3.5, 3, -0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffcdd2";
+  ctx.beginPath(); ctx.arc(x + 10, y + 12, 1.2, 0, Math.PI * 2); ctx.fill();
+}
+function desenharBanana(ctx, x, y) {
+  ctx.strokeStyle = "#fdd835"; ctx.lineWidth = 6; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.arc(x + 15, y + 19, 8, Math.PI, Math.PI * 1.6); ctx.stroke();
+  ctx.lineCap = "butt"; ctx.lineWidth = 1;
+  ctx.fillStyle = "#795548";
+  ctx.beginPath(); ctx.arc(x + 11, y + 5, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 22, y + 19, 3, 0, Math.PI * 2); ctx.fill();
+}
+function desenharLaranja(ctx, x, y) {
+  ctx.fillStyle = "#fb8c00"; ctx.strokeStyle = "#e65100";
+  ctx.beginPath(); ctx.arc(x + 15, y + 15, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#2e7d32";
+  ctx.beginPath(); ctx.arc(x + 15, y + 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#2e7d32"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 15, y + 7); ctx.lineTo(x + 14, y + 12); ctx.stroke();
+  ctx.lineWidth = 1;
+}
+function desenharUva(ctx, x, y) {
+  ctx.strokeStyle = "#6d4c41"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 15, y + 3); ctx.lineTo(x + 15, y + 8); ctx.stroke();
+  ctx.lineWidth = 1;
+  const pos = [[-5,-1],[0,-4],[5,-1],[-3,3],[3,3],[-5,6],[0,7],[5,6]];
+  ctx.fillStyle = "#8e24aa";
+  for (const [dx, dy] of pos) { ctx.beginPath(); ctx.arc(x + 15 + dx, y + 8 + dy, 4, 0, Math.PI * 2); ctx.fill(); }
+}
+function desenharMorango(ctx, x, y) {
+  const cx = x + 15;
+  ctx.fillStyle = "#e53935";
+  ctx.beginPath(); ctx.moveTo(cx, y + 4); ctx.lineTo(x + 5, y + 10); ctx.lineTo(x + 5, y + 25);
+  ctx.lineTo(cx, y + 28); ctx.lineTo(x + 25, y + 25); ctx.lineTo(x + 25, y + 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#43a047";
+  ctx.beginPath(); ctx.moveTo(cx, y + 2); ctx.lineTo(x + 6, y + 10); ctx.lineTo(x + 10, y + 6);
+  ctx.lineTo(cx, y + 3); ctx.lineTo(x + 20, y + 6); ctx.lineTo(x + 24, y + 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#fdd835";
+  for (const [px, py] of [[cx-5, y+13],[cx+5, y+13],[cx-3, y+17],[cx+3, y+17],[cx, y+21]]) {
+    ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function desenharMelancia(ctx, x, y) {
+  ctx.fillStyle = "#2e7d32";
+  ctx.beginPath(); ctx.arc(x + 15, y + 12, 13, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = "#e53935";
+  ctx.beginPath(); ctx.arc(x + 15, y + 14, 10, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = "#212121";
+  for (const [px, py] of [[x+10, y+17],[x+20, y+17],[x+15, y+22]]) {
+    ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function desenharLimao(ctx, x, y) {
+  ctx.fillStyle = "#fdd835"; ctx.strokeStyle = "#f9a825";
+  ctx.beginPath(); ctx.ellipse(x + 15, y + 15, 10, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#33691e";
+  ctx.beginPath(); ctx.arc(x + 15, y + 4, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 15, y + 26, 2.5, 0, Math.PI * 2); ctx.fill();
+}
+function desenharCereja(ctx, x, y) {
+  ctx.strokeStyle = "#6d4c41"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 15, y + 3); ctx.lineTo(x + 15, y + 10); ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#d32f2f";
+  ctx.beginPath(); ctx.arc(x + 9, y + 17, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 20, y + 17, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffcdd2";
+  ctx.beginPath(); ctx.arc(x + 8, y + 14, 1.3, 0, Math.PI * 2); ctx.fill();
+}
+function desenharPessego(ctx, x, y) {
+  ctx.fillStyle = "#ffcc80"; ctx.strokeStyle = "#ef6c00";
+  ctx.beginPath(); ctx.arc(x + 15, y + 16, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "#e65100"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + 15, y + 7); ctx.lineTo(x + 15, y + 25); ctx.stroke();
+  ctx.fillStyle = "#43a047";
+  ctx.beginPath(); ctx.arc(x + 15, y + 4, 3, 0, Math.PI * 2); ctx.fill();
+}
+function desenharAbacaxi(ctx, x, y) {
+  ctx.fillStyle = "#43a047";
+  ctx.beginPath(); ctx.moveTo(x + 15, y + 2); ctx.lineTo(x + 9, y + 10); ctx.lineTo(x + 21, y + 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#fdd835";
+  ctx.fillRect(x + 7, y + 9, 16, 19);
+  ctx.strokeStyle = "#f57f17"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + 11, y + 11); ctx.lineTo(x + 19, y + 11); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 11, y + 16); ctx.lineTo(x + 19, y + 16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 11, y + 21); ctx.lineTo(x + 19, y + 21); ctx.stroke();
+}
+function desenharEstrela(ctx, x, y) {
+  const cx = x + 15, cy = y + 15;
+  ctx.fillStyle = "#ffd600"; ctx.strokeStyle = "#f57f17";
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const ang = -Math.PI / 2 + i * Math.PI / 5;
+    const r = i % 2 === 0 ? 13 : 6;
+    const px = cx + r * Math.cos(ang), py = cy + r * Math.sin(ang);
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+function desenharVeneno(ctx, x, y) {
+  ctx.fillStyle = "#7e57c2"; ctx.strokeStyle = "#311b92";
+  ctx.beginPath(); ctx.arc(x + 15, y + 14, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.arc(x + 11, y + 11, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 19, y + 11, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#212121";
+  ctx.beginPath(); ctx.arc(x + 12, y + 16, 1.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18, y + 16, 1.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#4a148c";
+  ctx.beginPath(); ctx.moveTo(x + 9, y + 18); ctx.lineTo(x + 21, y + 18); ctx.lineTo(x + 15, y + 27); ctx.closePath(); ctx.fill();
+}
+function desenharCoracao(ctx, x, y) {
+  ctx.fillStyle = "#ef5350";
+  ctx.beginPath(); ctx.arc(x + 9, y + 10, 5.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 16, y + 10, 5.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 4, y + 13); ctx.lineTo(x + 21, y + 13); ctx.lineTo(x + 12.5, y + 26); ctx.closePath(); ctx.fill();
+}
+
+const FRUTAS = [
+  { nome: "Maca",       pontos: 25,  crescimento: 1, cor: "#e53935", especial: null,      desenhar: desenharMaca },
+  { nome: "Banana",     pontos: 30,  crescimento: 1, cor: "#fdd835", especial: null,      desenhar: desenharBanana },
+  { nome: "Laranja",    pontos: 40,  crescimento: 1, cor: "#fb8c00", especial: null,      desenhar: desenharLaranja },
+  { nome: "Uva",        pontos: 5,   crescimento: 1, cor: "#8e24aa", especial: null,      desenhar: desenharUva },
+  { nome: "Morango",    pontos: 15,  crescimento: 1, cor: "#e53935", especial: null,      desenhar: desenharMorango },
+  { nome: "Melancia",   pontos: 100, crescimento: 3, cor: "#43a047", especial: null,      desenhar: desenharMelancia },
+  { nome: "Limao",      pontos: 20,  crescimento: 1, cor: "#fdd835", especial: null,      desenhar: desenharLimao },
+  { nome: "Cereja",     pontos: 10,  crescimento: 1, cor: "#d32f2f", especial: null,      desenhar: desenharCereja },
+  { nome: "Pessego",    pontos: 50,  crescimento: 2, cor: "#ffcc80", especial: null,      desenhar: desenharPessego },
+  { nome: "Abacaxi",    pontos: 60,  crescimento: 2, cor: "#fdd835", especial: null,      desenhar: desenharAbacaxi },
+  { nome: "Bonus Dourado", pontos: 150, crescimento: 1, cor: "#ffd600", especial: "bonus",   desenhar: desenharEstrela },
+  { nome: "Veneno",     pontos: -50, crescimento: 0, cor: "#7e57c2", especial: "veneno",   desenhar: desenharVeneno },
+  { nome: "Coracao",    pontos: 0,   crescimento: 0, cor: "#ef5350", especial: "coracao",  desenhar: desenharCoracao },
+];
+const INDICES_NORMAIS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+function descricaoFruta(indice) {
+  const f = FRUTAS[indice];
+  if (f.especial === "bonus") return "Bonus +150";
+  if (f.especial === "veneno") return "Veneno";
+  if (f.especial === "coracao") return "Coracao +vida";
+  return f.nome + "(+" + f.pontos + ")";
+}
+
+// ---------- Recordes (localStorage) ----------
+const CHAVE_RECORDES = "cobrinha_recordes_web";
+function carregarRecordes() {
+  try { const d = JSON.parse(localStorage.getItem(CHAVE_RECORDES)); if (d && typeof d === "object") return d; } catch (e) {}
+  return {};
+}
+function salvarRecordes(dados) {
+  try { localStorage.setItem(CHAVE_RECORDES, JSON.stringify(dados)); } catch (e) {}
+}
+function inserirRecorde(dados, chave, nome, pontos) {
+  if (!dados[chave]) dados[chave] = [];
+  dados[chave].push({ nome: nome, pontos: pontos });
+  dados[chave].sort((a, b) => b.pontos - a.pontos);
+  dados[chave] = dados[chave].slice(0, 5);
+}
+
+// ---------- Elementos ----------
+const el = {};
+function $(id) { return document.getElementById(id); }
+
+// ---------- Jogo ----------
+let J = null;
+let canvas = null, ctx2d = null;
+let tickTimer = null, aberturaTimer = null;
+
+function novoJogador(nome, corCabeca, paleta, direcao, ai) {
+  return {
+    nome: nome, corCabeca: corCabeca, paleta: paleta,
+    direcao: direcao, proxima: direcao, corpo: [],
+    crescer: 0, pontos: 0, vidas: 1, vivo: true, ai: ai,
+  };
+}
+
+function iniciarJogo() {
+  if (tickTimer) clearInterval(tickTimer);
+  if (aberturaTimer) clearInterval(aberturaTimer);
+  const cfg = configAtual();
+  const centro = Math.floor(LINHAS / 2);
+  const p1 = novoJogador(cfg.nome1, COR_CABECA_P1, PALETA_P1, [1, 0]);
+  p1.corpo = [[5, centro], [4, centro], [3, centro]];
+  J = {
+    modo: cfg.modo, dificuldade: cfg.dificuldade, som: cfg.som,
+    jogadores: [p1],
+    frutas: [], parede: [], gaviao: null, gaviao_passos: 0,
+    escorpiao: null, dragaoCorpo: [], dragaoPassos: 0,
+    mensagem: "", estado: "jogando",
+    abertura_ativa: true, tempoAbertura: 0,
+  };
+  if (cfg.modo === "2jogadores") {
+    const p2 = novoJogador(cfg.nome2, COR_CABECA_P2, PALETA_P2, [-1, 0]);
+    p2.corpo = [[COLUNAS - 6, centro], [COLUNAS - 5, centro], [COLUNAS - 4, centro]];
+    J.jogadores.push(p2);
+  } else if (cfg.modo === "vs_cyborg") {
+    const p2 = novoJogador("Cyborgue", COR_CABECA_CYBORG, PALETA_CYBORG, [-1, 0], true);
+    p2.corpo = [[COLUNAS - 6, centro], [COLUNAS - 5, centro], [COLUNAS - 4, centro]];
+    J.jogadores.push(p2);
+  }
+  pousarFrutas();
+  atualizarHud();
+  mostrarTelaJogo();
+  criarAudio();
+  if (somAtivado) tocarMusica();
+  if (J.abertura_ativa) {
+    J.abertura_ativa = false;
+    J.estado = "abertura";
+    animarAbertura(0);
+  } else {
+    desenhar();
+  }
+  tickTimer = setInterval(passo, DIFICULDADES[cfg.dificuldade].velocidade);
+}
+
+// ---------- Lógica ----------
+function celulasOcupadas() {
+  const o = new Set();
+  for (const j of J.jogadores) for (const p of j.corpo) o.add(p[0] + "," + p[1]);
+  for (const p of J.parede) o.add(p[0] + "," + p[1]);
+  if (J.gaviao) o.add(J.gaviao[0] + "," + J.gaviao[1]);
+  if (J.escorpiao) o.add(J.escorpiao.pos[0] + "," + J.escorpiao.pos[1]);
+  for (const p of J.dragaoCorpo) o.add(p[0] + "," + p[1]);
+  for (const f of J.frutas) o.add(f.pos[0] + "," + f.pos[1]);
+  return o;
+}
+function celulaLivre(c, r) {
+  if (c < 0 || c >= COLUNAS || r < 0 || r >= LINHAS) return false;
+  return !celulasOcupadas().has(c + "," + r);
+}
+function pousarFrutas() {
+  while (J.frutas.length < 2) {
+    const livres = [];
+    for (let c = 0; c < COLUNAS; c++) for (let r = 0; r < LINHAS; r++) if (celulaLivre(c, r)) livres.push([c, r]);
+    if (!livres.length) break;
+    const pos = livres[Math.floor(Math.random() * livres.length)];
+    const prob = DIFICULDADES[J.dificuldade].especial;
+    let indice;
+    if (Math.random() < prob) indice = 10 + Math.floor(Math.random() * 3);
+    else indice = INDICES_NORMAIS[Math.floor(Math.random() * INDICES_NORMAIS.length)];
+    J.frutas.push({ pos: pos, indice: indice });
+  }
+}
+function comprimentoMaximo() {
+  let m = 0;
+  for (const j of J.jogadores) if (j.vivo) m = Math.max(m, j.corpo.length);
+  return m;
+}
+function criarParede() {
+  if (J.parede.length) return;
+  for (let t = 0; t < 300; t++) {
+    const col = 3 + Math.floor(Math.random() * (COLUNAS - 6));
+    const inicio = 2 + Math.floor(Math.random() * (LINHAS - 7));
+    const cand = [];
+    for (let i = 0; i < 5; i++) cand.push([col, inicio + i]);
+    const ocupado = new Set();
+    for (const j of J.jogadores) for (const p of j.corpo) ocupado.add(p[0] + "," + p[1]);
+    if (cand.every(p => !ocupado.has(p[0] + "," + p[1]))) { J.parede = cand; break; }
+  }
+  J.mensagem = "Parede de tijolos apareceu!";
+  atualizarHud();
+}
+function criarGaviao() {
+  if (J.gaviao) return;
+  let cabeca = J.jogadores[0].corpo[0];
+  for (const j of J.jogadores) if (j.corpo.length > J.jogadores[0].corpo.length) cabeca = j.corpo[0];
+  const cantos = [[0, 0], [0, LINHAS - 1], [COLUNAS - 1, 0], [COLUNAS - 1, LINHAS - 1]];
+  let melhor = cantos[0], melhorD = -1;
+  for (const c of cantos) {
+    const d = (c[0] - cabeca[0]) ** 2 + (c[1] - cabeca[1]) ** 2;
+    if (d > melhorD) { melhorD = d; melhor = c; }
+  }
+  J.gaviao = melhor;
+  J.gaviao_passos = 0;
+  J.mensagem = "O GAVIAO apareceu!";
+  atualizarHud();
+}
+function criarEscorpiao() {
+  if (J.escorpiao) return;
+  const linha = 2 + Math.floor(Math.random() * (LINHAS - 4));
+  const col = 3 + Math.floor(Math.random() * (COLUNAS - 6));
+  J.escorpiao = { pos: [col, linha], dir: Math.random() < 0.5 ? -1 : 1, passos: 0 };
+  J.mensagem = "O ESCORPIAO apareceu!";
+  atualizarHud();
+}
+function criarDragao() {
+  if (J.dragaoCorpo.length) return;
+  let cabeca = J.jogadores[0].corpo[0];
+  for (const j of J.jogadores) if (j.corpo.length > J.jogadores[0].corpo.length) cabeca = j.corpo[0];
+  const cantos = [[0, 0], [0, LINHAS - 1], [COLUNAS - 1, 0], [COLUNAS - 1, LINHAS - 1]];
+  let inicio = cantos[0], melhorD = -1;
+  for (const c of cantos) {
+    const d = (c[0] - cabeca[0]) ** 2 + (c[1] - cabeca[1]) ** 2;
+    if (d > melhorD) { melhorD = d; inicio = c; }
+  }
+  J.dragaoCorpo = [inicio.slice(), [Math.max(0, inicio[0] - 1), inicio[1]], [Math.max(0, inicio[0] - 2), inicio[1]]];
+  J.dragaoPassos = 0;
+  J.mensagem = "O DRAGAO apareceu!";
+  atualizarHud();
+}
+function atualizarObstaculos() {
+  const dif = DIFICULDADES[J.dificuldade];
+  const tam = comprimentoMaximo();
+  if (!J.parede.length && tam >= dif.parede) criarParede();
+  if (!J.gaviao && tam >= dif.gaviao) criarGaviao();
+  if (!J.escorpiao && tam >= dif.escorpiao) criarEscorpiao();
+  if (!J.dragaoCorpo.length && tam >= dif.dragao) criarDragao();
+}
+function cabecaMaisProxima(origem) {
+  let alvo = null, menor = null;
+  for (const j of J.jogadores) {
+    if (!j.vivo) continue;
+    const cab = j.corpo[0];
+    const d = Math.abs(cab[0] - origem[0]) + Math.abs(cab[1] - origem[1]);
+    if (menor === null || d < menor) { menor = d; alvo = cab; }
+  }
+  return alvo;
+}
+
+function posEmCorpo(pos, corpo) { return corpo.some(p => p[0] === pos[0] && p[1] === pos[1]); }
+function posEmObstaculos(pos) {
+  if (posEmCorpo(pos, J.parede)) return true;
+  if (J.gaviao && pos[0] === J.gaviao[0] && pos[1] === J.gaviao[1]) return true;
+  if (J.escorpiao && pos[0] === J.escorpiao.pos[0] && pos[1] === J.escorpiao.pos[1]) return true;
+  if (posEmCorpo(pos, J.dragaoCorpo)) return true;
+  return false;
+}
+
+function celulaSeguraIA(pos, jogador) {
+  if (pos[0] < 0 || pos[0] >= COLUNAS || pos[1] < 0 || pos[1] >= LINHAS) return false;
+  if (posEmObstaculos(pos)) return false;
+  for (const outro of J.jogadores) {
+    if (outro === jogador) {
+      const corpoPerigo = outro.crescer > 0 ? outro.corpo : outro.corpo.slice(0, -1);
+      if (posEmCorpo(pos, corpoPerigo)) return false;
+    } else {
+      if (posEmCorpo(pos, outro.corpo)) return false;
+    }
+  }
+  return true;
+}
+function moverIA(jogador) {
+  const cabeca = jogador.corpo[0];
+  let grupo = J.frutas.filter(f => FRUTAS[f.indice].especial !== "veneno");
+  if (!grupo.length) grupo = J.frutas;
+  let alvo = null;
+  if (grupo.length) {
+    let menor = null;
+    for (const f of grupo) {
+      const d = Math.abs(f.pos[0] - cabeca[0]) + Math.abs(f.pos[1] - cabeca[1]);
+      if (menor === null || d < menor) { menor = d; alvo = f.pos; }
+    }
+  }
+  let melhor = null, melhorDist = null;
+  for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    if (d[0] === -jogador.direcao[0] && d[1] === -jogador.direcao[1]) continue;
+    const nova = [cabeca[0] + d[0], cabeca[1] + d[1]];
+    if (!celulaSeguraIA(nova, jogador)) continue;
+    const dist = alvo ? Math.abs(nova[0] - alvo[0]) + Math.abs(nova[1] - alvo[1]) : 0;
+    if (melhor === null || dist < melhorDist) { melhor = d; melhorDist = dist; }
+  }
+  jogador.proxima = melhor || jogador.direcao;
+}
+
+function matarSnake(jogador, motivo) {
+  if (!jogador.vivo) return;
+  jogador.vidas -= 1;
+  if (jogador.vidas > 0) {
+    ressuscitar(jogador);
+    J.mensagem = jogador.nome + " perdeu uma vida! (" + motivo + ")";
+    somMorte();
+  } else {
+    jogador.vivo = false;
+    J.mensagem = jogador.nome + " morreu! (" + motivo + ")";
+    somMorte();
+  }
+  atualizarHud();
+  verificarFim();
+}
+function ressuscitar(jogador) {
+  const direcoes = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  for (let i = direcoes.length - 1; i > 0; i--) {
+    const k = Math.floor(Math.random() * (i + 1));
+    [direcoes[i], direcoes[k]] = [direcoes[k], direcoes[i]];
+  }
+  jogador.crescer = 0;
+  for (const d of direcoes) {
+    let meio = null;
+    for (let cand = 0; cand < COLUNAS; cand++) {
+      if (celulaLivre(cand, Math.floor(LINHAS / 2))) { meio = [cand, Math.floor(LINHAS / 2)]; break; }
+    }
+    if (!meio) continue;
+    const corpo = [meio.slice()];
+    let ok = true;
+    for (let i = 1; i < 3; i++) {
+      const cell = [meio[0] - d[0] * i, meio[1] - d[1] * i];
+      if (!celulaLivre(cell[0], cell[1])) { ok = false; break; }
+      corpo.push(cell);
+    }
+    if (ok) { jogador.corpo = corpo; jogador.direcao = d; jogador.proxima = d; return; }
+  }
+  jogador.corpo = [[Math.floor(COLUNAS / 2), Math.floor(LINHAS / 2)]];
+  jogador.direcao = [1, 0];
+  jogador.proxima = [1, 0];
+}
+function verificarFim() {
+  const vivos = J.jogadores.filter(j => j.vivo);
+  if (J.modo === "1jogador") {
+    if (!vivos.length) fimDeJogo(J.jogadores[0].pontos, "Fim de jogo!", null);
+  } else {
+    if (vivos.length === 1) fimDeJogo(vivos[0].pontos, vivos[0].nome + " VENCEU!", vivos[0]);
+    else if (!vivos.length) fimDeJogo(0, "Empate! Os dois morreram", null);
+  }
+}
+function chaveRecorde() {
+  if (J.modo === "1jogador") return "1jogador/" + J.dificuldade;
+  return J.modo;
+}
+function fimDeJogo(pontos, motivo, vencedor) {
+  J.estado = "fim";
+  J.mensagem = motivo;
+  if (vencedor) somVitoria(); else somMorte();
+  const dados = carregarRecordes();
+  const chave = chaveRecorde();
+  let nome;
+  if (vencedor) nome = vencedor.nome;
+  else if (J.modo === "1jogador") nome = J.jogadores[0].nome;
+  else nome = "Empate";
+  inserirRecorde(dados, chave, nome, pontos);
+  salvarRecordes(dados);
+  atualizarHud();
+  desenhar();
+}
+
+function moverTodos() {
+  const vivos = J.jogadores.filter(j => j.vivo);
+  const snapshot = new Map();
+  for (const j of vivos) snapshot.set(j, j.corpo.map(p => p.slice()));
+  const novas = new Map();
+  const mortos = new Map();
+  for (const j of vivos) {
+    if (j.ai) moverIA(j);
+    j.direcao = j.proxima.slice();
+    const cab = j.corpo[0];
+    novas.set(j, [cab[0] + j.direcao[0], cab[1] + j.direcao[1]]);
+  }
+  for (let i = 0; i < vivos.length; i++) {
+    for (let k = i + 1; k < vivos.length; k++) {
+      const a = novas.get(vivos[i]), b = novas.get(vivos[k]);
+      if (a[0] === b[0] && a[1] === b[1]) { mortos.set(vivos[i], "colisao frontal"); mortos.set(vivos[k], "colisao frontal"); }
+    }
+  }
+  for (const j of vivos) {
+    if (mortos.has(j)) continue;
+    const nova = novas.get(j);
+    if (nova[0] < 0 || nova[0] >= COLUNAS || nova[1] < 0 || nova[1] >= LINHAS) { mortos.set(j, "bateu na borda"); continue; }
+    if (posEmCorpo(nova, J.parede)) { mortos.set(j, "bateu na parede de tijolos"); continue; }
+    const corpoChecado = j.crescer > 0 ? snapshot.get(j) : snapshot.get(j).slice(0, -1);
+    if (posEmCorpo(nova, corpoChecado)) { mortos.set(j, "colidiu com o proprio corpo"); continue; }
+    for (const outro of vivos) {
+      if (outro !== j && posEmCorpo(nova, snapshot.get(outro))) { mortos.set(j, "colidiu com outro jogador"); break; }
+    }
+    if (mortos.has(j)) continue;
+    if (J.gaviao && nova[0] === J.gaviao[0] && nova[1] === J.gaviao[1]) { mortos.set(j, "foi pego pelo gaviao"); continue; }
+    if (J.escorpiao && nova[0] === J.escorpiao.pos[0] && nova[1] === J.escorpiao.pos[1]) { mortos.set(j, "foi picado pelo escorpiao"); continue; }
+    if (posEmCorpo(nova, J.dragaoCorpo)) { mortos.set(j, "foi queimado pelo dragao"); continue; }
+  }
+  for (const j of vivos) {
+    if (mortos.has(j)) continue;
+    const nova = novas.get(j);
+    j.corpo.unshift(nova);
+    if (j.crescer > 0) j.crescer -= 1;
+    else j.corpo.pop();
+  }
+  for (const j of vivos) if (mortos.has(j)) matarSnake(j, mortos.get(j));
+}
+
+function moverObstaculos() {
+  if (J.gaviao) {
+    J.gaviao_passos += 1;
+    let intervalo = DIFICULDADES[J.dificuldade].gaviao_intervalo;
+    const tam = comprimentoMaximo();
+    if (tam >= 18) intervalo = Math.max(1, intervalo - 1);
+    if (tam >= 26) intervalo = Math.max(1, intervalo - 1);
+    if (J.gaviao_passos >= intervalo) {
+      J.gaviao_passos = 0;
+      const alvo = cabecaMaisProxima(J.gaviao);
+      if (alvo) {
+        const [hc, hr] = J.gaviao;
+        let dx = 0, dy = 0;
+        if (alvo[0] > hc) dx = 1; else if (alvo[0] < hc) dx = -1;
+        if (alvo[1] > hr) dy = 1; else if (alvo[1] < hr) dy = -1;
+        J.gaviao = [hc + dx, hr + dy];
+      }
+    }
+  }
+  if (J.escorpiao) {
+    J.escorpiao.passos += 1;
+    if (J.escorpiao.passos % 2 === 0) {
+      const [c, l] = J.escorpiao.pos;
+      const d = J.escorpiao.dir;
+      let n = [c + d, l];
+      const bloqueado = n[0] < 0 || n[0] >= COLUNAS || posEmCorpo(n, J.parede) ||
+        (J.gaviao && n[0] === J.gaviao[0] && n[1] === J.gaviao[1]) ||
+        posEmCorpo(n, J.dragaoCorpo);
+      if (bloqueado) {
+        J.escorpiao.dir = -d;
+        n = [c - d, l];
+        if (n[0] < 0 || n[0] >= COLUNAS || posEmCorpo(n, J.parede)) n = [c, l];
+      }
+      J.escorpiao.pos = n;
+    }
+  }
+  if (J.dragaoCorpo.length) {
+    J.dragaoPassos += 1;
+    if (J.dragaoPassos % 2 === 0) {
+      const alvo = cabecaMaisProxima(J.dragaoCorpo[0]);
+      if (alvo) {
+        const [hc, hr] = J.dragaoCorpo[0];
+        let dx = 0, dy = 0;
+        if (alvo[0] > hc) dx = 1; else if (alvo[0] < hc) dx = -1;
+        if (alvo[1] > hr) dy = 1; else if (alvo[1] < hr) dy = -1;
+        const novo = [hc + dx, hr + dy];
+        if (novo[0] >= 0 && novo[0] < COLUNAS && novo[1] >= 0 && novo[1] < LINHAS) {
+          J.dragaoCorpo = [novo].concat(J.dragaoCorpo.slice(0, -1));
+        }
+      }
+    }
+  }
+  verificarColisoesObstaculos();
+}
+function verificarColisoesObstaculos() {
+  for (const j of J.jogadores) {
+    if (!j.vivo) continue;
+    for (const celula of j.corpo) {
+      if (posEmObstaculos(celula)) {
+        let motivo = "colidiu com um obstaculo";
+        if (J.gaviao && celula[0] === J.gaviao[0] && celula[1] === J.gaviao[1]) motivo = "foi pego pelo gaviao";
+        else if (J.escorpiao && celula[0] === J.escorpiao.pos[0] && celula[1] === J.escorpiao.pos[1]) motivo = "foi picado pelo escorpiao";
+        else if (posEmCorpo(celula, J.dragaoCorpo)) motivo = "foi queimado pelo dragao";
+        else if (posEmCorpo(celula, J.parede)) motivo = "bateu na parede de tijolos";
+        matarSnake(j, motivo);
+        break;
+      }
+    }
+  }
+}
+function verificarFrutas() {
+  for (const j of J.jogadores) {
+    if (!j.vivo) continue;
+    const cabeca = j.corpo[0];
+    for (let i = J.frutas.length - 1; i >= 0; i--) {
+      const f = J.frutas[i];
+      if (f.pos[0] === cabeca[0] && f.pos[1] === cabeca[1]) {
+        comerFruta(j, i);
+        break;
+      }
+    }
+  }
+}
+function comerFruta(jogador, i) {
+  const f = J.frutas.splice(i, 1)[0];
+  const fruta = FRUTAS[f.indice];
+  if (fruta.especial === "bonus") {
+    jogador.pontos += 150; jogador.crescer += 1;
+    J.mensagem = jogador.nome + " achou o BONUS DOURADO! +150";
+    somBonus();
+  } else if (fruta.especial === "veneno") {
+    jogador.pontos -= 50;
+    J.mensagem = jogador.nome + " comeu VENENO! -50";
+    somVeneno();
+    if (jogador.corpo.length <= 3) matarSnake(jogador, "morreu de tanto veneno");
+    else { jogador.corpo.pop(); jogador.corpo.pop(); }
+  } else if (fruta.especial === "coracao") {
+    jogador.vidas = Math.min(jogador.vidas + 1, 5);
+    J.mensagem = jogador.nome + " ganhou +1 VIDA!";
+    somCoracao();
+  } else {
+    jogador.pontos += fruta.pontos;
+    jogador.crescer += fruta.crescimento;
+    J.mensagem = jogador.nome + " comeu " + fruta.nome + "! +" + fruta.pontos;
+    somComer();
+  }
+  pousarFrutas();
+}
+
+function passo() {
+  if (!J) return;
+  if (J.estado === "jogando") {
+    moverTodos();
+    moverObstaculos();
+    verificarFrutas();
+    atualizarObstaculos();
+    atualizarHud();
+    desenhar();
+  }
+}
+function tentarDirecao(jogador, d) {
+  if (!J || J.estado !== "jogando" || !jogador.vivo) return;
+  if (d[0] === -jogador.direcao[0] && d[1] === -jogador.direcao[1]) return;
+  jogador.proxima = d;
+}
+
+// ---------- Desenho ----------
+function desenhar() {
+  const ctx = ctx2d;
+  ctx.clearRect(0, 0, LARGURA, ALTURA);
+  ctx.fillStyle = COR_FUNDO;
+  ctx.fillRect(0, 0, LARGURA, ALTURA);
+  for (let c = 0; c < COLUNAS; c++) {
+    for (let r = 0; r < LINHAS; r++) {
+      ctx.fillStyle = COR_FUNDO;
+      ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+    }
+  }
+  ctx.strokeStyle = COR_GRADE;
+  ctx.lineWidth = 1;
+  for (let c = 0; c <= COLUNAS; c++) {
+    const x = Math.min(c * CELL, LARGURA - 1);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ALTURA); ctx.stroke();
+  }
+  for (let r = 0; r <= LINHAS; r++) {
+    const y = Math.min(r * CELL, ALTURA - 1);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(LARGURA, y); ctx.stroke();
+  }
+  if (J.parede.length) desenharParede(ctx);
+  for (const f of J.frutas) FRUTAS[f.indice].desenhar(ctx, f.pos[0] * CELL, f.pos[1] * CELL);
+  for (const j of J.jogadores) desenharCobra(ctx, j);
+  if (J.gaviao) desenharGaviao(ctx);
+  if (J.escorpiao) desenharEscorpiao(ctx);
+  if (J.dragaoCorpo.length) desenharDragao(ctx);
+
+  if (J.estado === "pausado") {
+    ctx.fillStyle = "rgba(15,23,42,0.92)";
+    ctx.fillRect(LARGURA / 2 - 130, ALTURA / 2 - 30, 260, 60);
+    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
+    ctx.strokeRect(LARGURA / 2 - 130, ALTURA / 2 - 30, 260, 60);
+    ctx.fillStyle = "#ffffff"; ctx.font = "bold 16px Segoe UI, Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("PAUSADO (P para voltar)", LARGURA / 2, ALTURA / 2);
+  } else if (J.estado === "fim") {
+    ctx.fillStyle = "rgba(15,23,42,0.94)";
+    ctx.fillRect(0, ALTURA / 2 - 70, LARGURA, 140);
+    ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 3;
+    ctx.strokeRect(0, ALTURA / 2 - 70, LARGURA, 140);
+    ctx.fillStyle = "#ef4444"; ctx.font = "bold 22px Segoe UI, Arial";
+    ctx.fillText("FIM DE JOGO", LARGURA / 2, ALTURA / 2 - 35);
+    ctx.fillStyle = "#ffffff"; ctx.font = "bold 13px Segoe UI, Arial";
+    ctx.fillText(J.mensagem, LARGURA / 2, ALTURA / 2 - 5);
+    ctx.fillStyle = "#94a3b8"; ctx.font = "12px Segoe UI, Arial";
+    ctx.fillText(J.jogadores.map(j => j.nome + ": " + j.pontos).join("   "), LARGURA / 2, ALTURA / 2 + 22);
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText("R = jogar novamente      M = menu", LARGURA / 2, ALTURA / 2 + 48);
+  }
+  ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+}
+
+function desenharParede(ctx) {
+  for (const [c, r] of J.parede) {
+    const x = c * CELL, y = r * CELL;
+    ctx.fillStyle = "#d84315"; ctx.strokeStyle = "#3e2723";
+    ctx.fillRect(x, y, CELL, CELL); ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+    ctx.strokeStyle = "#bf360c"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, y + CELL / 2); ctx.lineTo(x + CELL, y + CELL / 2); ctx.stroke();
+    if ((c + r) % 2 === 0) {
+      ctx.beginPath(); ctx.moveTo(x + CELL / 2, y); ctx.lineTo(x + CELL / 2, y + CELL / 2); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(x, y + CELL / 2); ctx.lineTo(x, y + CELL); ctx.stroke();
+    }
+  }
+}
+function desenharGaviao(ctx) {
+  const x = J.gaviao[0] * CELL, y = J.gaviao[1] * CELL;
+  const cx = x + CELL / 2;
+  ctx.fillStyle = "#5d4037";
+  ctx.beginPath(); ctx.moveTo(x + 2, y + CELL - 8); ctx.lineTo(x + 2, y + CELL - 2); ctx.lineTo(x + 8, y + CELL - 4); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 8, y + CELL - 8); ctx.lineTo(x + 8, y + CELL - 2); ctx.lineTo(x + 2, y + CELL - 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#8d6e63"; ctx.strokeStyle = "#4e342e";
+  ctx.beginPath(); ctx.arc(x + 15, y + 16, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 22, y + 5.5, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#fdd835";
+  ctx.beginPath(); ctx.moveTo(x + 18, y + 4); ctx.lineTo(x + 27, y + 4); ctx.lineTo(x + 18, y + 9); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "black";
+  ctx.beginPath(); ctx.arc(x + 22.5, y + 6.5, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#6d4c41";
+  ctx.beginPath(); ctx.moveTo(x + 7, y + 14); ctx.lineTo(cx, y + 8); ctx.lineTo(x + 20, y + 14); ctx.lineTo(x + 16, y + 22); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#fdd835"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 21, y + 26); ctx.lineTo(x + 21, y + 32); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 26, y + 26); ctx.lineTo(x + 26, y + 32); ctx.stroke();
+  ctx.lineWidth = 1;
+}
+function desenharEscorpiao(ctx) {
+  const x = J.escorpiao.pos[0] * CELL, y = J.escorpiao.pos[1] * CELL;
+  const cx = x + CELL / 2, d = J.escorpiao.dir;
+  ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 4; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx, y + 2); ctx.lineTo(cx + d * 7, y); ctx.lineTo(cx + d * 12, y + 5); ctx.lineTo(cx + d * 13, y + 11); ctx.stroke();
+  ctx.lineCap = "butt"; ctx.lineWidth = 1;
+  ctx.fillStyle = "#ff9100"; ctx.strokeStyle = "#3e2723";
+  ctx.beginPath(); ctx.arc(x + CELL - 7 - d * 3, y + 8, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#e65100";
+  ctx.beginPath(); ctx.arc(x + 15, y + 17, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#d84315";
+  ctx.beginPath(); ctx.arc(x + 6, y + 14, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#e65100"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 5, y + 13); ctx.lineTo(x + 1, y + 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 5, y + 15); ctx.lineTo(x + 1, y + 19); ctx.stroke();
+  ctx.lineWidth = 1;
+}
+function desenharDragao(ctx) {
+  for (let i = J.dragaoCorpo.length - 1; i > 0; i--) {
+    const [c, r] = J.dragaoCorpo[i];
+    ctx.fillStyle = "#1b5e20";
+    ctx.beginPath(); ctx.arc(c * CELL + 15, r * CELL + 15, 9, 0, Math.PI * 2); ctx.fill();
+  }
+  const [hc, hr] = J.dragaoCorpo[0];
+  const x = hc * CELL, y = hr * CELL;
+  ctx.fillStyle = "#2e7d32"; ctx.strokeStyle = "#004d40";
+  ctx.beginPath(); ctx.arc(x + 15, y + 16, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#43a047";
+  ctx.beginPath(); ctx.moveTo(x + 8, y + 8); ctx.lineTo(x + 3, y - 1); ctx.lineTo(x + 16, y + 6); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 18, y + 8); ctx.lineTo(x + 28, y); ctx.lineTo(x + 22, y + 12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#2e7d32";
+  ctx.beginPath(); ctx.arc(x + 24, y + 4.5, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#ff1744";
+  ctx.beginPath(); ctx.arc(x + 26, y + 5.5, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#fdd835"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 20, y + 1); ctx.lineTo(x + 22, y - 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 25, y + 1); ctx.lineTo(x + 27, y - 2); ctx.stroke();
+  ctx.fillStyle = "#ff9100";
+  ctx.beginPath(); ctx.moveTo(x + 24, y + 3); ctx.lineTo(x + 36, y); ctx.lineTo(x + 36, y + 8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#1b5e20"; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(x + 7, y + 26); ctx.lineTo(x + 1, y + 22); ctx.stroke();
+  ctx.fillStyle = "#ff9100";
+  ctx.beginPath(); ctx.moveTo(x - 1, y + 20); ctx.lineTo(x + 4, y + 16); ctx.lineTo(x + 5, y + 25); ctx.closePath(); ctx.fill();
+  ctx.lineWidth = 1;
+}
+function desenharCobra(ctx, jogador) {
+  const corpo = jogador.corpo;
+  for (let i = corpo.length - 1; i > 0; i--) {
+    const [c, r] = corpo[i];
+    const cor = jogador.paleta[i % jogador.paleta.length];
+    ctx.fillStyle = cor;
+    ctx.fillRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
+    if (jogador.ai) {
+      ctx.strokeStyle = "#37474f"; ctx.lineWidth = 1;
+      ctx.strokeRect(c * CELL + 2.5, r * CELL + 2.5, CELL - 5, CELL - 5);
+    }
+  }
+  const [hc, hr] = corpo[0];
+  const cx = hc * CELL + CELL / 2, cy = hr * CELL + CELL / 2;
+  ctx.fillStyle = jogador.corCabeca;
+  ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill();
+  if (jogador.ai) { ctx.strokeStyle = "#37474f"; ctx.stroke(); }
+  const [dx, dy] = jogador.direcao;
+  const [px, py] = [-dy, dx];
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.arc(cx + dx * 5 + px * 5, cy + dy * 5 + py * 5, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + dx * 5 - px * 5, cy + dy * 5 - py * 5, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#212121";
+  ctx.beginPath(); ctx.arc(cx + dx * 5 + px * 5 + dx * 1.5, cy + dy * 5 + py * 5 + dy * 1.5, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + dx * 5 - px * 5 + dx * 1.5, cy + dy * 5 - py * 5 + dy * 1.5, 2, 0, Math.PI * 2); ctx.fill();
+}
+
+// ---------- Abertura (Hollywood) ----------
+function animarAbertura(tempo) {
+  if (!J || J.estado !== "abertura") return;
+  const ctx = ctx2d;
+  ctx.clearRect(0, 0, LARGURA, ALTURA);
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, LARGURA, ALTURA);
+  ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3;
+  ctx.strokeRect(4.5, 4.5, LARGURA - 9, ALTURA - 9);
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 120); ctx.lineTo(LARGURA, 120); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, ALTURA - 120); ctx.lineTo(LARGURA, ALTURA - 120); ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+  const p1 = J.jogadores[0];
+  const temRival = J.jogadores.length > 1;
+  const nomeRival = temRival ? J.jogadores[1].nome.toUpperCase() : "";
+
+  if (tempo < 1400) {
+    const prog = Math.min(1, tempo / 1000);
+    const tam = Math.round(12 + prog * 80);
+    ctx.fillStyle = p1.corCabeca;
+    ctx.font = "bold " + tam + "px Impact, Segoe UI, Arial";
+    ctx.fillText(p1.nome.toUpperCase(), LARGURA / 2, ALTURA / 2 - 80);
+  } else if (temRival) {
+    if (tempo < 2000) {
+      const on = Math.floor(tempo / 80) % 2 === 0;
+      if (on) {
+        ctx.fillStyle = "#fbbf24";
+        ctx.font = "bold 140px Impact, Segoe UI, Arial";
+        ctx.fillText("VS", LARGURA / 2, ALTURA / 2);
+      }
+      ctx.fillStyle = p1.corCabeca;
+      ctx.font = "bold 42px Impact, Segoe UI, Arial";
+      ctx.fillText(p1.nome.toUpperCase(), LARGURA / 2, ALTURA / 2 - 90);
+    } else if (tempo < 3300) {
+      const prog = Math.min(1, (tempo - 2000) / 900);
+      const tam = Math.round(12 + prog * 80);
+      ctx.fillStyle = J.jogadores[1].corCabeca;
+      ctx.font = "bold " + tam + "px Impact, Segoe UI, Arial";
+      ctx.fillText(nomeRival, LARGURA / 2, ALTURA / 2 + 85);
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "bold 60px Impact, Segoe UI, Arial";
+      ctx.fillText("VS", LARGURA / 2, ALTURA / 2);
+    } else {
+      ctx.fillStyle = J.jogadores[1].corCabeca;
+      ctx.font = "bold 90px Impact, Segoe UI, Arial";
+      ctx.fillText(nomeRival, LARGURA / 2, ALTURA / 2 + 85);
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "bold 60px Impact, Segoe UI, Arial";
+      ctx.fillText("VS", LARGURA / 2, ALTURA / 2);
+    }
+  } else {
+    ctx.fillStyle = "#4ade80";
+    ctx.font = "bold 80px Impact, Segoe UI, Arial";
+    ctx.fillText("PREPARE-SE!", LARGURA / 2, ALTURA / 2 + 60);
+  }
+
+  const baseContagem = temRival ? 3300 : 2300;
+  if (tempo >= baseContagem + 1600) {
+    J.estado = "jogando";
+    atualizarHud();
+    desenhar();
+    return;
+  }
+  if (tempo >= baseContagem + 900) {
+    const prog = (tempo - (baseContagem + 900)) / 700;
+    const tam = Math.round(40 + prog * 100);
+    ctx.fillStyle = "#4ade80";
+    ctx.font = "bold " + tam + "px Impact, Segoe UI, Arial";
+    ctx.fillText("VAI!!", LARGURA / 2, ALTURA / 2);
+  } else if (tempo >= baseContagem) {
+    const seg = Math.max(1, 3 - Math.floor((tempo - baseContagem) / 300));
+    const tam = Math.round(90 + 30 * ((tempo - baseContagem) % 300) / 300);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold " + tam + "px Impact, Segoe UI, Arial";
+    ctx.fillText(String(seg), LARGURA / 2, ALTURA / 2);
+  }
+  ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+  aberturaTimer = setTimeout(() => animarAbertura(tempo + 40), 40);
+}
+
+// ---------- HUD ----------
+function atualizarHud() {
+  if (!J) return;
+  el.hudJogadores.innerHTML = J.jogadores.map(j =>
+    '<span class="jog" style="color:' + j.corCabeca + '">' + j.nome + ": " + j.pontos +
+    " pts | tam " + j.corpo.length + " | vidas " + j.vidas + "</span>"
+  ).join("&nbsp;&nbsp;");
+  if (J.frutas.length) el.hudFrutas.textContent = "Frutas: " + J.frutas.map(f => descricaoFruta(f.indice)).join(", ");
+  else el.hudFrutas.textContent = "Frutas: -";
+  const obs = [];
+  if (J.parede.length) obs.push("Parede");
+  if (J.gaviao) obs.push("Gaviao");
+  if (J.escorpiao) obs.push("Escorpiao");
+  if (J.dragaoCorpo.length) obs.push("Dragao");
+  el.hudObs.textContent = obs.length ? "Obstaculos: " + obs.join(", ") : "";
+  el.mensagem.textContent = J.mensagem || "";
+}
+
+// ---------- Menu ----------
+const estadoMenu = { modo: "1jogador", dificuldade: "Media" };
+
+function construirMenu() {
+  const om = el.opcoesModo;
+  om.innerHTML = "";
+  for (const m of MODOS) {
+    const b = document.createElement("button");
+    b.className = "opcao" + (m.chave === estadoMenu.modo ? " sel" : "");
+    b.textContent = m.texto;
+    b.addEventListener("click", () => {
+      estadoMenu.modo = m.chave;
+      om.querySelectorAll(".opcao").forEach(x => x.classList.remove("sel"));
+      b.classList.add("sel");
+      atualizarVisibilidade();
+    });
+    om.appendChild(b);
+  }
+  const od = el.opcoesDificuldade;
+  od.innerHTML = "";
+  for (const d of Object.keys(DIFICULDADES)) {
+    const b = document.createElement("button");
+    b.className = "opcao" + (d === estadoMenu.dificuldade ? " sel" : "");
+    b.textContent = d;
+    b.addEventListener("click", () => {
+      estadoMenu.dificuldade = d;
+      od.querySelectorAll(".opcao").forEach(x => x.classList.remove("sel"));
+      b.classList.add("sel");
+      atualizarPlacar();
+    });
+    od.appendChild(b);
+  }
+}
+function configAtual() {
+  return {
+    modo: estadoMenu.modo,
+    dificuldade: estadoMenu.dificuldade,
+    nome1: el.nome1.value.trim() || "Jogador 1",
+    nome2: el.nome2.value.trim() || "Jogador 2",
+    som: somAtivado,
+  };
+}
+function atualizarVisibilidade() {
+  const dois = estadoMenu.modo === "2jogadores";
+  el.rotuloNome2.style.display = dois ? "block" : "none";
+  el.nome2.style.display = dois ? "block" : "none";
+  el.rotuloNome1.textContent = estadoMenu.modo === "vs_cyborg" ? "Seu nome (o adversario sera o Cyborgue)" :
+    (dois ? "Nome do Jogador 1" : "Nome do Jogador");
+  atualizarPlacar();
+}
+function atualizarPlacar() {
+  const dados = carregarRecordes();
+  const chave = chaveRecordeMenu();
+  const lista = dados[chave] || [];
+  let html;
+  if (!lista.length) html = "Ainda sem recordes neste modo";
+  else {
+    const medalhas = ["1o", "2o", "3o", "4o", "5o"];
+    html = lista.map((e, i) => medalhas[i] + "  " + e.nome + ": " + e.pontos + " pontos").join("<br>");
+  }
+  el.listaRecordes.innerHTML = html;
+}
+function chaveRecordeMenu() {
+  if (estadoMenu.modo === "1jogador") return "1jogador/" + estadoMenu.dificuldade;
+  return estadoMenu.modo;
+}
+function limparPlacar() {
+  if (confirm("Tem certeza que deseja apagar todos os recordes?")) {
+    salvarRecordes({});
+    atualizarPlacar();
+  }
+}
+
+// ---------- Telas ----------
+function mostrarTelaMenu() {
+  if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  if (aberturaTimer) { clearTimeout(aberturaTimer); aberturaTimer = null; }
+  pararMusica();
+  J = null;
+  el.telaJogo.style.display = "none";
+  el.telaMenu.style.display = "flex";
+  atualizarPlacar();
+}
+function mostrarTelaJogo() {
+  el.telaMenu.style.display = "none";
+  el.telaJogo.style.display = "flex";
+}
+
+// ---------- Controles (teclado) ----------
+const DIR_TECLAS = {
+  w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
+  ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+  W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0],
+};
+document.addEventListener("keydown", (ev) => {
+  criarAudio();
+  const key = ev.key;
+  if (key === "p" || key === "P") {
+    if (J && J.estado === "jogando") { J.estado = "pausado"; desenhar(); }
+    else if (J && J.estado === "pausado") { J.estado = "jogando"; }
+    ev.preventDefault();
+    return;
+  }
+  if (key === "r" || key === "R") {
+    if (J) { J.abertura_ativa = false; iniciarJogo(); }
+    ev.preventDefault();
+    return;
+  }
+  if (key === "m" || key === "M") { mostrarTelaMenu(); ev.preventDefault(); return; }
+  if (key === "s" || key === "S") {
+    somAtivado = !somAtivado;
+    if (somAtivado) { criarAudio(); tocarMusica(); } else pararMusica();
+    el.ckSom.checked = somAtivado;
+    ev.preventDefault();
+    return;
+  }
+  if (J && J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); return; }
+  const d = DIR_TECLAS[key];
+  if (d) {
+    ev.preventDefault();
+    if (J && J.jogadores.length) {
+      if (key === "w" || key === "s" || key === "a" || key === "d" || key === "W" || key === "S" || key === "A" || key === "D") {
+        tentarDirecao(J.jogadores[0], d);
+      } else {
+        const idx = Math.min(1, J.jogadores.length - 1);
+        tentarDirecao(J.jogadores[idx], d);
+      }
+    }
+  }
+});
+
+// ---------- Controles (toque) ----------
+let toqueInicio = null;
+function handleTouchStart(ev) {
+  criarAudio();
+  if (J && J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); return; }
+  const t = ev.changedTouches[0];
+  toqueInicio = { x: t.clientX, y: t.clientY };
+}
+function handleTouchEnd(ev) {
+  if (!toqueInicio || !J || J.estado !== "jogando") { toqueInicio = null; return; }
+  const t = ev.changedTouches[0];
+  const dx = t.clientX - toqueInicio.x;
+  const dy = t.clientY - toqueInicio.y;
+  toqueInicio = null;
+  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+  let d;
+  if (Math.abs(dx) > Math.abs(dy)) d = dx > 0 ? [1, 0] : [-1, 0];
+  else d = dy > 0 ? [0, 1] : [0, -1];
+  if (J.jogadores.length) tentarDirecao(J.jogadores[0], d);
+}
+document.addEventListener("touchstart", handleTouchStart, { passive: true });
+document.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+function construirDpads() {
+  const simb = { up: "&#9650;", down: "&#9660;", left: "&#9664;", right: "&#9654;" };
+  const grade = [
+    [null, "up", null],
+    ["left", null, "right"],
+    [null, "down", null],
+  ];
+  const criar = (container, indiceJogador, setDir) => {
+    container.innerHTML = "";
+    for (const linha of grade) {
+      for (const cel of linha) {
+        const btn = document.createElement("button");
+        if (!cel) { btn.className = "b-vazio"; btn.disabled = true; }
+        else {
+          btn.innerHTML = simb[cel];
+          const dir = setDir[cel];
+          const acionar = (e) => {
+            e.preventDefault(); e.stopPropagation(); criarAudio();
+            if (J && J.jogadores[indiceJogador]) tentarDirecao(J.jogadores[indiceJogador], dir);
+          };
+          btn.addEventListener("touchstart", acionar);
+          btn.addEventListener("mousedown", acionar);
+        }
+        container.appendChild(btn);
+      }
+    }
+  };
+  criar(el.dpad1, 0, { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] });
+  criar(el.dpad2, 1, { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] });
+}
+function ativarDpads() {
+  const temJogo = J && J.jogadores.length;
+  const mostrar2 = temJogo && J.modo === "2jogadores";
+  const mostrar1 = temJogo && J.modo !== "2jogadores";
+  el.dpad1.style.visibility = mostrar1 ? "visible" : "hidden";
+  el.dpad2.style.visibility = mostrar2 ? "visible" : "hidden";
+}
+
+// ---------- Joystick virtual (celular) ----------
+const JOY_RAIO = 52;
+let joystick = null;
+function mostrarDica() {
+  el.dicaToque.style.display = "block";
+  setTimeout(() => { el.dicaToque.style.display = "none"; }, 4500);
+}
+function iniciarJoystick(ev) {
+  const t = ev.changedTouches[0];
+  const r = el.areaCanvas.getBoundingClientRect();
+  const baseX = t.clientX - r.left;
+  const baseY = t.clientY - r.top;
+  joystick = { id: t.identifier, baseX: baseX, baseY: baseY };
+  el.joystick.style.display = "block";
+  el.joystick.style.left = (r.left + baseX) + "px";
+  el.joystick.style.top = (r.top + baseY) + "px";
+  el.joyKnob.style.left = "33px";
+  el.joyKnob.style.top = "33px";
+  moverJoystick(0, 0);
+}
+function moverJoystick(dx, dy) {
+  const dist = Math.hypot(dx, dy);
+  if (dist > JOY_RAIO) { dx = dx / dist * JOY_RAIO; dy = dy / dist * JOY_RAIO; }
+  el.joyKnob.style.left = (33 + dx) + "px";
+  el.joyKnob.style.top = (33 + dy) + "px";
+  if (dist > 14 && J && J.estado === "jogando") {
+    let d;
+    if (Math.abs(dx) > Math.abs(dy)) d = dx > 0 ? [1, 0] : [-1, 0];
+    else d = dy > 0 ? [0, 1] : [0, -1];
+    if (J.jogadores.length) tentarDirecao(J.jogadores[0], d);
+  }
+}
+function encerrarJoystick() {
+  joystick = null;
+  el.joystick.style.display = "none";
+}
+function areaCanvasTouchStart(ev) {
+  criarAudio();
+  if (!J) return;
+  if (J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); ev.preventDefault(); ev.stopPropagation(); return; }
+  if (J.estado !== "jogando") return;
+  if (J.modo === "2jogadores") return;
+  iniciarJoystick(ev);
+  ev.preventDefault();
+  ev.stopPropagation();
+};
+document.addEventListener("touchmove", (ev) => {
+  if (!joystick) return;
+  for (const t of ev.changedTouches) {
+    if (t.identifier !== joystick.id) continue;
+    const r = el.areaCanvas.getBoundingClientRect();
+    const dx = t.clientX - (r.left + joystick.baseX);
+    const dy = t.clientY - (r.top + joystick.baseY);
+    moverJoystick(dx, dy);
+    break;
+  }
+}, { passive: true });
+document.addEventListener("touchend", (ev) => {
+  if (!joystick) return;
+  for (const t of ev.changedTouches) {
+    if (t.identifier === joystick.id) { encerrarJoystick(); break; }
+  }
+});
+document.addEventListener("touchcancel", () => { if (joystick) encerrarJoystick(); });
+
+// ---------- Inicialização ----------
+window.addEventListener("load", () => {
+  Object.assign(el, {
+    telaMenu: $("tela-menu"), telaJogo: $("tela-jogo"),
+    opcoesModo: $("opcoes-modo"), opcoesDificuldade: $("opcoes-dificuldade"),
+    nome1: $("nome1"), nome2: $("nome2"),
+    rotuloNome1: $("rotulo-nome1"), rotuloNome2: $("rotulo-nome2"),
+    ckSom: $("ck-som"), btnJogar: $("btn-jogar"),
+    listaRecordes: $("lista-recordes"), btnLimpar: $("btn-limpar"),
+    hudJogadores: $("hud-jogadores"), hudFrutas: $("hud-frutas"), hudObs: $("hud-obs"),
+    mensagem: $("mensagem"),
+    dpad1: $("dpad1"), dpad2: $("dpad2"),
+    areaCanvas: $("area-canvas"), joystick: $("joystick"), joyKnob: $("joy-knob"),
+    dicaToque: $("dica-toque"),
+    rodapeEsq: $("rodape-esq"), rodapeDir: $("rodape-dir"),
+  });
+  canvas = $("canvas");
+  ctx2d = canvas.getContext("2d");
+  el.ckSom.checked = somAtivado;
+  el.ckSom.addEventListener("change", () => {
+    somAtivado = el.ckSom.checked;
+    if (somAtivado) { criarAudio(); if (J) tocarMusica(); } else pararMusica();
+  });
+  el.btnJogar.addEventListener("click", () => { criarAudio(); iniciarJogo(); ativarDpads(); mostrarDica(); });
+  el.btnLimpar.addEventListener("click", limparPlacar);
+  el.nome1.addEventListener("input", atualizarPlacar);
+  el.nome2.addEventListener("input", atualizarPlacar);
+  el.areaCanvas.addEventListener("touchstart", areaCanvasTouchStart, { passive: false });
+  construirMenu();
+  construirDpads();
+  atualizarVisibilidade();
+  el.telaMenu.style.display = "flex";
+  el.telaJogo.style.display = "none";
+  el.rodapeDir.textContent = "Versão Web";
+  ativarDpads();
+});
+</script>
+</body>
+</html>
