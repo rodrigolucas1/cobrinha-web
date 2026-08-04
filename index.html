@@ -128,6 +128,29 @@
   #hud .frutas { color: #fbbf24; font-size: 11px; text-align: right; }
   #hud .obs { color: #ef4444; font-size: 11px; font-weight: bold; }
   #mensagem { color: #4ade80; font-weight: bold; font-size: 13px; padding: 4px 12px; text-align: center; min-height: 20px; background: #0f172a; }
+  #botoes-fim {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 8px 16px 12px;
+  }
+  .btn-fim {
+    flex: 1;
+    max-width: 190px;
+    padding: 15px 0;
+    font-size: 17px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    color: #fff;
+    touch-action: manipulation;
+  }
+  .btn-fim:active { transform: scale(0.96); }
+  #btn-reiniciar { background: #16a34a; }
+  #btn-reiniciar:active { background: #15803d; }
+  #btn-menu-fim { background: #334155; }
+  #btn-menu-fim:active { background: #1e293b; }
   #area-canvas {
     flex: 1;
     display: flex;
@@ -226,9 +249,10 @@
     <button class="btn-jogar" id="btn-jogar">JOGAR</button>
 
     <div class="ajuda">
-      Controles: P1 = WASD / swipes &nbsp;|&nbsp; P2 = Setas<br>
+      Controles: P1 = WASD / toque e arraste &nbsp;|&nbsp; P2 = Setas / D-pad<br>
       P = pausar &nbsp;|&nbsp; R = reiniciar &nbsp;|&nbsp; M = menu &nbsp;|&nbsp; S = som<br>
-      No celular, use os botões de direção na parte de baixo da tela.
+      No celular: toque no tabuleiro e arraste (joystick) para mover a cobra.<br>
+      Cada jogador tem 5 vidas. Come coracoes para ganhar +1 vida.
     </div>
 
     <div id="quadro-recordes">
@@ -249,6 +273,10 @@
   <div id="mensagem"></div>
   <div id="area-canvas">
     <canvas id="canvas" width="600" height="600"></canvas>
+  </div>
+  <div id="botoes-fim" style="display:none">
+    <button id="btn-reiniciar" class="btn-fim">&#8635; REINICIAR</button>
+    <button id="btn-menu-fim" class="btn-fim">&#9776; MENU</button>
   </div>
   <div id="dpads">
     <div class="dpad" id="dpad1"></div>
@@ -297,37 +325,113 @@ function criarAudio() {
   }
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
-function beep(freq, dur) {
+function beep(freq, dur, tipo, vol) {
   if (!somAtivado || !audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = "square";
+  osc.type = tipo || "square";
   osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  const v = (vol === undefined) ? 0.12 : vol;
+  gain.gain.setValueAtTime(v, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur / 1000);
   osc.connect(gain); gain.connect(audioCtx.destination);
   osc.start(); osc.stop(audioCtx.currentTime + dur / 1000);
 }
-let musicaTimer = null, musicaPasso = 0;
+
+// ----- Musica de fundo (trilha heroica original, com secoes variadas) -----
+const BEAT = 340;
+let musicaTimer = null, musicaPos = 0;
+function construirMusica() {
+  const seq = [];
+  const passo = (b, ...notas) => seq.push({ b, n: notas });
+  const N = (f, b, t, v) => [f, b, t, v];
+  const baixo = (f, b) => N(f, b, "sawtooth", 0.06);
+  const C3 = 130.81, Eb3 = 155.56, F3 = 174.61, G3 = 196.00, Ab3 = 207.65, Bb3 = 233.08;
+  const C4 = 261.63, D4 = 293.66, Eb4 = 311.13, F4 = 349.23, G4 = 392.00, Ab4 = 415.30, Bb4 = 466.16;
+  const C5 = 523.25, D5 = 587.33, Eb5 = 622.25, F5 = 698.46, G5 = 783.99, C6 = 1046.50;
+
+  const secA = (final) => {
+    passo(3, N(C5, 3, "triangle", 0.15), baixo(C3, 3));
+    passo(1, N(C5, 1, "triangle", 0.11));
+    passo(1, N(C5, 1, "triangle", 0.09));
+    passo(1, N(C5, 1, "triangle", 0.09));
+    passo(1, N(Bb4, 1, "triangle", 0.09), baixo(Ab3, 1));
+    passo(1, N(Bb4, 1, "triangle", 0.09));
+    passo(2, N(Ab4, 2, "triangle", 0.13), baixo(Ab3, 2));
+    passo(2, N(G4, 2, "triangle", 0.13), baixo(G3, 2));
+    passo(4, N(C5, 4, "triangle", 0.14), baixo(C3, 4));
+    passo(3, N(C5, 3, "triangle", 0.14), baixo(C3, 3));
+    passo(1, N(C5, 1, "triangle", 0.11));
+    passo(1, N(C5, 1, "triangle", 0.09));
+    passo(1, N(C5, 1, "triangle", 0.09));
+    passo(1, N(Bb4, 1, "triangle", 0.09), baixo(Ab3, 1));
+    passo(1, N(Bb4, 1, "triangle", 0.09));
+    passo(2, N(Ab4, 2, "triangle", 0.13), baixo(Ab3, 2));
+    passo(2, N(G4, 2, "triangle", 0.13), baixo(G3, 2));
+    if (final === "alto") passo(4, N(G4, 4, "triangle", 0.14), baixo(G3, 4));
+    else if (final === "vai") passo(4, N(F4, 4, "triangle", 0.14), baixo(F3, 4));
+    else passo(4, N(Bb4, 4, "triangle", 0.14), baixo(Bb3, 4));
+  };
+  const secB = () => {
+    passo(1, N(G4, 1, "triangle", 0.11), baixo(G3, 1));
+    passo(1, N(Ab4, 1, "triangle", 0.11), baixo(Ab3, 1));
+    passo(2, N(Bb4, 2, "triangle", 0.13), baixo(Bb3, 2));
+    passo(4, N(C5, 4, "triangle", 0.14), baixo(C3, 4));
+    passo(1, N(D5, 1, "triangle", 0.12));
+    passo(1, N(Eb5, 1, "triangle", 0.12));
+    passo(1, N(D5, 1, "triangle", 0.11));
+    passo(1, N(C5, 1, "triangle", 0.11));
+    passo(4, N(Bb4, 4, "triangle", 0.13), baixo(Bb3, 4));
+    passo(1, N(G4, 1, "triangle", 0.11), baixo(G3, 1));
+    passo(1, N(Ab4, 1, "triangle", 0.11), baixo(Ab3, 1));
+    passo(2, N(Bb4, 2, "triangle", 0.13), baixo(Bb3, 2));
+    passo(4, N(C5, 4, "triangle", 0.14), baixo(C3, 4));
+    passo(2, N(Eb5, 2, "triangle", 0.13));
+    passo(1, N(D5, 1, "triangle", 0.11));
+    passo(1, N(C5, 1, "triangle", 0.11));
+    passo(4, N(Bb4, 4, "triangle", 0.13), baixo(Bb3, 4));
+  };
+  const cadencia = () => {
+    passo(3, N(C5, 3, "triangle", 0.15), baixo(C3, 3));
+    passo(1, N(C5, 1, "triangle", 0.11));
+    passo(3, N(Eb5, 3, "triangle", 0.15), baixo(Eb3, 3));
+    passo(1, N(C5, 1, "triangle", 0.11));
+    passo(2, N(G5, 2, "triangle", 0.14), baixo(G3, 2));
+    passo(2, N(Eb5, 2, "triangle", 0.13), baixo(Eb3, 2));
+    passo(4, N(C6, 4, "triangle", 0.16), baixo(C3, 4));
+  };
+  secA("baixo");
+  secB();
+  secA("alto");
+  cadencia();
+  return seq;
+}
+const MUSICA = construirMusica();
+function tocarPassoMusica() {
+  if (!somAtivado || !audioCtx) return;
+  if (musicaPos >= MUSICA.length) musicaPos = 0;
+  const passo = MUSICA[musicaPos];
+  const dur = passo.b * BEAT;
+  for (const n of passo.n) beep(n[0], n[1] * BEAT, n[2], n[3]);
+  musicaPos++;
+  musicaTimer = setTimeout(tocarPassoMusica, dur);
+}
 function tocarMusica() {
   if (!somAtivado || !audioCtx) return;
-  const notas = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 261.63, 196.00,
-                 220.00, 261.63, 329.63, 392.00, 329.63, 392.00, 523.25, 440.00];
-  musicaPasso = 0;
-  if (musicaTimer) clearInterval(musicaTimer);
-  musicaTimer = setInterval(() => {
-    if (!somAtivado || !audioCtx) return;
-    beep(notas[musicaPasso], 220);
-    musicaPasso = (musicaPasso + 1) % notas.length;
-  }, 300);
+  musicaPos = 0;
+  if (musicaTimer) clearTimeout(musicaTimer);
+  tocarPassoMusica();
 }
-function pararMusica() { if (musicaTimer) { clearInterval(musicaTimer); musicaTimer = null; } }
-function somComer() { beep(880, 60); }
-function somBonus() { beep(1100, 70); setTimeout(() => beep(1320, 70), 90); }
-function somVeneno() { beep(180, 120); }
-function somCoracao() { beep(660, 80); setTimeout(() => beep(990, 90), 100); }
-function somMorte() { beep(220, 200); setTimeout(() => beep(150, 250), 230); }
-function somVitoria() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 100), i * 110)); }
+function pararMusica() { if (musicaTimer) { clearTimeout(musicaTimer); musicaTimer = null; } }
+function somComer() {
+  beep(620, 45, "sine", 0.16);
+  setTimeout(() => beep(930, 55, "sine", 0.12), 50);
+}
+function somBonus() { beep(1100, 70, "square", 0.10); setTimeout(() => beep(1320, 70, "square", 0.10), 90); }
+function somVeneno() { beep(180, 120, "sawtooth", 0.12); }
+function somCoracao() { beep(660, 80, "sine", 0.14); setTimeout(() => beep(990, 90, "sine", 0.12), 100); }
+function somMorte() { beep(220, 200, "sawtooth", 0.12); setTimeout(() => beep(150, 250, "sawtooth", 0.12), 230); }
+function somVitoria() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 100, "square", 0.10), i * 110)); }
 
 // ---------- Frutas ----------
 function desenharMaca(ctx, x, y) {
@@ -509,7 +613,7 @@ function novoJogador(nome, corCabeca, paleta, direcao, ai) {
   return {
     nome: nome, corCabeca: corCabeca, paleta: paleta,
     direcao: direcao, proxima: direcao, corpo: [],
-    crescer: 0, pontos: 0, vidas: 1, vivo: true, ai: ai,
+    crescer: 0, pontos: 0, vidas: 5, vivo: true, ai: ai,
   };
 }
 
@@ -539,6 +643,7 @@ function iniciarJogo() {
   }
   pousarFrutas();
   atualizarHud();
+  atualizarBotoesFim();
   mostrarTelaJogo();
   criarAudio();
   if (somAtivado) tocarMusica();
@@ -769,6 +874,12 @@ function fimDeJogo(pontos, motivo, vencedor) {
   salvarRecordes(dados);
   atualizarHud();
   desenhar();
+  atualizarBotoesFim();
+}
+
+function atualizarBotoesFim() {
+  if (!el.botoesFim) return;
+  el.botoesFim.style.display = (J && J.estado === "fim") ? "flex" : "none";
 }
 
 function moverTodos() {
@@ -988,7 +1099,7 @@ function desenhar() {
     ctx.fillStyle = "#94a3b8"; ctx.font = "12px Segoe UI, Arial";
     ctx.fillText(J.jogadores.map(j => j.nome + ": " + j.pontos).join("   "), LARGURA / 2, ALTURA / 2 + 22);
     ctx.fillStyle = "#94a3b8";
-    ctx.fillText("R = jogar novamente      M = menu", LARGURA / 2, ALTURA / 2 + 48);
+    ctx.fillText("Use os botoes REINICIAR / MENU abaixo (R ou M no teclado)", LARGURA / 2, ALTURA / 2 + 48);
   }
   ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
 }
@@ -1187,7 +1298,10 @@ function atualizarHud() {
   if (!J) return;
   el.hudJogadores.innerHTML = J.jogadores.map(j =>
     '<span class="jog" style="color:' + j.corCabeca + '">' + j.nome + ": " + j.pontos +
-    " pts | tam " + j.corpo.length + " | vidas " + j.vidas + "</span>"
+    " pts | tam " + j.corpo.length + " " +
+    '<span style="color:#ef4444">' + "&#9829;".repeat(Math.max(0, j.vidas)) + "</span>" +
+    '<span style="color:#475569">' + "&#9825;".repeat(Math.max(0, 5 - j.vidas)) + "</span>" +
+    "</span>"
   ).join("&nbsp;&nbsp;");
   if (J.frutas.length) el.hudFrutas.textContent = "Frutas: " + J.frutas.map(f => descricaoFruta(f.indice)).join(", ");
   else el.hudFrutas.textContent = "Frutas: -";
@@ -1281,6 +1395,7 @@ function mostrarTelaMenu() {
   J = null;
   el.telaJogo.style.display = "none";
   el.telaMenu.style.display = "flex";
+  atualizarBotoesFim();
   atualizarPlacar();
 }
 function mostrarTelaJogo() {
@@ -1469,6 +1584,7 @@ window.addEventListener("load", () => {
     hudJogadores: $("hud-jogadores"), hudFrutas: $("hud-frutas"), hudObs: $("hud-obs"),
     mensagem: $("mensagem"),
     dpad1: $("dpad1"), dpad2: $("dpad2"),
+    botoesFim: $("botoes-fim"), btnReiniciar: $("btn-reiniciar"), btnMenuFim: $("btn-menu-fim"),
     areaCanvas: $("area-canvas"), joystick: $("joystick"), joyKnob: $("joy-knob"),
     dicaToque: $("dica-toque"),
     rodapeEsq: $("rodape-esq"), rodapeDir: $("rodape-dir"),
@@ -1482,6 +1598,8 @@ window.addEventListener("load", () => {
   });
   el.btnJogar.addEventListener("click", () => { criarAudio(); iniciarJogo(); ativarDpads(); mostrarDica(); });
   el.btnLimpar.addEventListener("click", limparPlacar);
+  el.btnReiniciar.addEventListener("click", () => { criarAudio(); if (J) { J.abertura_ativa = false; iniciarJogo(); } });
+  el.btnMenuFim.addEventListener("click", () => { criarAudio(); mostrarTelaMenu(); });
   el.nome1.addEventListener("input", atualizarPlacar);
   el.nome2.addEventListener("input", atualizarPlacar);
   el.areaCanvas.addEventListener("touchstart", areaCanvasTouchStart, { passive: false });
