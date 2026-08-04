@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cobrinha 3D</title>
+<style>
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1026; font-family: "Segoe UI", Arial, sans-serif; touch-action: none; -webkit-user-select: none; user-select: none; }
+#game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#hud { position: fixed; top: 10px; left: 12px; z-index: 20; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.7); }
+#hud .linha { font-size: 14px; }
+#vidas { font-size: 18px; letter-spacing: 2px; color: #ef5350; }
+#pontos { font-size: 22px; font-weight: bold; color: #ffd740; }
+#mensagem { font-size: 13px; margin-top: 4px; min-height: 18px; color: #c7d3ff; }
+#btn-pausa { position: fixed; top: 10px; right: 12px; z-index: 20; width: 44px; height: 44px; border: none; border-radius: 50%; background: rgba(20,28,60,.85); color: #fff; font-size: 18px; }
+.overlay { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(6,10,26,.82); }
+.painel { background: rgba(16,24,52,.96); border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 24px 28px; text-align: center; color: #fff; max-width: 340px; width: 86%; max-height: 92%; overflow-y: auto; box-shadow: 0 18px 60px rgba(0,0,0,.6); }
+.painel h1 { margin: 0 0 4px; font-size: 30px; color: #ffd740; letter-spacing: 1px; }
+.painel .sub { color: #9fb3e8; margin-bottom: 16px; font-size: 13px; }
+.painel h2 { margin: 10px 0; font-size: 18px; }
+.grupo { display: flex; gap: 10px; justify-content: center; margin: 12px 0; }
+.btn { border: none; border-radius: 10px; padding: 12px 18px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; background: linear-gradient(180deg, #2d3a6e, #1a2450); box-shadow: 0 4px 10px rgba(0,0,0,.35); }
+.btn:active { transform: scale(.95); }
+.btn.ativo { background: linear-gradient(180deg, #f9a825, #f57f17); color: #1a1400; }
+.btn.principal { background: linear-gradient(180deg, #43a047, #2e7d32); font-size: 18px; padding: 14px 34px; }
+.btn.perigo { background: linear-gradient(180deg, #e53935, #b71c1c); }
+.ajuda { text-align: left; font-size: 12px; color: #aebbe0; line-height: 1.7; margin-top: 12px; }
+.ajuda b { color: #ffd740; }
+.recorde { color: #9fb3e8; font-size: 13px; margin-top: 6px; }
+#fim .score { font-size: 40px; color: #ffd740; font-weight: bold; margin: 8px 0; }
+#fim .novo { color: #66bb6a; font-weight: bold; font-size: 15px; }
+#fim .motivo { color: #ff8a80; font-size: 14px; margin-bottom: 10px; }
+.escondido { display: none !important; }
+#dpad { position: fixed; right: 14px; bottom: 14px; z-index: 30; display: none; grid-template-columns: 64px 64px 64px; grid-template-rows: 64px 64px 64px; gap: 6px; }
+@media (pointer: coarse) { #dpad { display: grid; } }
+.dbtn { border: none; border-radius: 14px; background: rgba(20,28,60,.7); color: #fff; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,.4); }
+.dbtn:active { background: rgba(249,168,37,.9); }
+#b-cima { grid-area: 1 / 2; }
+#b-esq { grid-area: 2 / 1; }
+#b-baixo { grid-area: 3 / 2; }
+#b-dir { grid-area: 2 / 3; }
+#botoes-fim { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+</style>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+<div id="hud">
+  <div class="linha" id="vidas"></div>
+  <div class="linha" id="pontos">0</div>
+  <div class="linha" id="mensagem"></div>
+</div>
+<button id="btn-pausa" title="Pausar">II</button>
+<div id="menu" class="overlay">
+  <div class="painel">
+    <h1>COBRINHA 3D</h1>
+    <div class="sub">A cobra famosa, agora em 3D</div>
+    <h2>Dificuldade</h2>
+    <div class="grupo">
+      <button class="btn" data-dificuldade="Facil">Facil</button>
+      <button class="btn ativo" data-dificuldade="Media">Media</button>
+      <button class="btn" data-dificuldade="Dificil">Dificil</button>
+    </div>
+    <button id="btn-jogar" class="btn principal">JOGAR</button>
+    <div class="ajuda">
+      <b>PC:</b> setas / WASD. <b>Celular:</b> use o direcional de toque.<br>
+      Coma as frutas para crescer. O <b>gaviao</b> vem atras de voce: coma o <b>Master</b> dourado para afasta-lo.<br>
+      Bonus +150, coracoes dão vida extra. Voce tem <b>5 vidas</b>.<br>
+      <a href="../index.html" style="color:#ffd740;">Jogar a versao 2D</a>
+    </div>
+    <div class="recorde" id="menu-recorde"></div>
+  </div>
+</div>
+<div id="pausa" class="overlay escondido">
+  <div class="painel">
+    <h2>PAUSA</h2>
+    <button id="btn-continuar" class="btn principal">CONTINUAR</button>
+  </div>
+</div>
+<div id="fim" class="overlay escondido">
+  <div class="painel">
+    <h2>FIM DE JOGO</h2>
+    <div class="motivo" id="fim-motivo"></div>
+    <div class="score" id="fim-score">0</div>
+    <div class="novo escondido" id="fim-novo">NOVO RECORDE!</div>
+    <div class="recorde" id="fim-recorde"></div>
+    <div id="botoes-fim">
+      <button id="btn-reiniciar" class="btn perigo">REINICIAR</button>
+      <button id="btn-menu-fim" class="btn">MENU</button>
+    </div>
+  </div>
+</div>
+<div id="dpad">
+  <button class="dbtn" id="b-cima">▲</button>
+  <button class="dbtn" id="b-esq">◀</button>
+  <button class="dbtn" id="b-baixo">▼</button>
+  <button class="dbtn" id="b-dir">▶</button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+const COL = 20, ROW = 20;
+const DIFICULDADES = {
+  "Facil":   { velocidade: 250, parede: 8,  gaviao: 12, especial: 0.20, gaviao_intervalo: 8 },
+  "Media":   { velocidade: 140, parede: 6,  gaviao: 10, especial: 0.30, gaviao_intervalo: 6 },
+  "Dificil": { velocidade: 105, parede: 4,  gaviao: 7,  especial: 0.40, gaviao_intervalo: 5 }
+};
+const FRUTAS = [
+  { nome: "Maca",     pontos: 10,  crescimento: 0, cor: 0xff5252 },
+  { nome: "Banana",   pontos: 15,  crescimento: 0, cor: 0xffd740 },
+  { nome: "Laranja",  pontos: 20,  crescimento: 0, cor: 0xff9800 },
+  { nome: "Uva",      pontos: 25,  crescimento: 0, cor: 0xab47bc },
+  { nome: "Morango",  pontos: 30,  crescimento: 0, cor: 0xe91e63 },
+  { nome: "Melancia", pontos: 35,  crescimento: 0, cor: 0x66bb6a },
+  { nome: "Abacaxi",  pontos: 40,  crescimento: 0, cor: 0xffee58 },
+  { nome: "Kiwi",     pontos: 45,  crescimento: 0, cor: 0x8d6e63 },
+  { nome: "Pera",     pontos: 50,  crescimento: 0, cor: 0xcddc39 },
+  { nome: "Coco",     pontos: 60,  crescimento: 0, cor: 0xa1887f },
+  { nome: "Bonus Dourado", pontos: 150, crescimento: 1, especial: "bonus",   cor: 0xffd600 },
+  { nome: "Coracao",        pontos: 0,   crescimento: 0, especial: "coracao",  cor: 0xef5350 },
+  { nome: "Master",         pontos: 100, crescimento: 0, especial: "master",   cor: 0xfbbf24 }
+];
+const REC_KEY = "cobrinha3d_record";
+let selDificuldade = "Media";
+
+function novoJogador() {
+  return { nome: "Voce", vivo: true, vidas: 5, pontos: 0, crescer: 0, dir: [1, 0], corpo: [[5,10],[4,10],[3,10],[2,10]] };
+}
+let J = { estado: "menu", dificuldade: "Media", jogadores: [novoJogador()], parede: [], gaviao: null, gaviao_espera: 0, frutas: [], mensagem: "" };
+
+const px = (c) => c - (COL - 1) / 2;
+const pz = (r) => r - (ROW - 1) / 2;
+
+let renderer, scene, camera;
+function montarCena() {
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("game-canvas"), antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1026);
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 16, 14);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const luz = new THREE.DirectionalLight(0xffffff, 0.9);
+  luz.position.set(8, 16, 7);
+  luz.castShadow = true;
+  luz.shadow.mapSize.set(1024, 1024);
+  luz.shadow.camera.left = -14; luz.shadow.camera.right = 14;
+  luz.shadow.camera.top = 14; luz.shadow.camera.bottom = -14;
+  scene.add(luz);
+  const chao = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshPhongMaterial({ color: 0x1a2340 }));
+  chao.rotation.x = -Math.PI / 2;
+  chao.receiveShadow = true;
+  scene.add(chao);
+  const grade = new THREE.GridHelper(20, 20, 0x3a4a7a, 0x26304f);
+  grade.position.y = 0.02;
+  scene.add(grade);
+  criarBorda();
+  criarPoolSnake();
+  criarPoolParede();
+  criarGaviaoGroup();
+}
+function criarBorda() {
+  const mat = new THREE.MeshPhongMaterial({ color: 0x3d4a6e });
+  const h = 0.5, e = 0.18;
+  const m1 = new THREE.Mesh(new THREE.BoxGeometry(e, h, 20), mat); m1.position.set(-10, h / 2, 0); scene.add(m1);
+  const m2 = new THREE.Mesh(new THREE.BoxGeometry(e, h, 20), mat); m2.position.set(10, h / 2, 0); scene.add(m2);
+  const m3 = new THREE.Mesh(new THREE.BoxGeometry(20, h, e), mat); m3.position.set(0, h / 2, -10); scene.add(m3);
+  const m4 = new THREE.Mesh(new THREE.BoxGeometry(20, h, e), mat); m4.position.set(0, h / 2, 10); scene.add(m4);
+}
+const segPool = [];
+const matCorpo = new THREE.MeshPhongMaterial({ color: 0x43a047 });
+const matCabeca = new THREE.MeshPhongMaterial({ color: 0x66bb6a });
+function criarPoolSnake() {
+  const geo = new THREE.BoxGeometry(0.85, 0.85, 0.85);
+  for (let i = 0; i < 200; i++) {
+    const m = new THREE.Mesh(geo, i === 0 ? matCabeca : matCorpo);
+    m.visible = false;
+    m.castShadow = true;
+    scene.add(m);
+    segPool.push(m);
+  }
+}
+const paredePool = [];
+function criarPoolParede() {
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const mat = new THREE.MeshPhongMaterial({ color: 0x8d6e63 });
+  for (let i = 0; i < 20; i++) {
+    const m = new THREE.Mesh(geo, mat);
+    m.visible = false;
+    m.castShadow = true;
+    scene.add(m);
+    paredePool.push(m);
+  }
+}
+const gaviaoGroup = new THREE.Group();
+function criarGaviaoGroup() {
+  const corpoG = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 8), new THREE.MeshPhongMaterial({ color: 0x5d4037 }));
+  corpoG.rotation.x = -Math.PI / 2;
+  gaviaoGroup.add(corpoG);
+  const matAsa = new THREE.MeshPhongMaterial({ color: 0x795548 });
+  const a1 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.3), matAsa); a1.position.set(0, 0.05, -0.15); a1.rotation.z = -0.15; gaviaoGroup.add(a1);
+  const a2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.3), matAsa); a2.position.set(0, 0.05, 0.15); a2.rotation.z = 0.15; gaviaoGroup.add(a2);
+  const bico = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.25, 6), new THREE.MeshPhongMaterial({ color: 0xf57f17 }));
+  bico.rotation.x = -Math.PI / 2;
+  bico.position.set(0, 0, -0.45);
+  gaviaoGroup.add(bico);
+  gaviaoGroup.visible = false;
+  scene.add(gaviaoGroup);
+}
+
+function criarMeshFruta(indice, pos) {
+  const f = FRUTAS[indice];
+  let m;
+  if (indice === 10) {
+    m = new THREE.Mesh(new THREE.OctahedronGeometry(0.45), new THREE.MeshPhongMaterial({ color: f.cor, emissive: f.cor, emissiveIntensity: 0.4 }));
+  } else if (indice === 11) {
+    m = new THREE.Group();
+    const mm = new THREE.MeshPhongMaterial({ color: f.cor, emissive: f.cor, emissiveIntensity: 0.35 });
+    const s1 = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), mm); s1.position.set(-0.18, 0.1, 0);
+    const s2 = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), mm); s2.position.set(0.18, 0.1, 0);
+    const cc = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.5, 12), mm); cc.rotation.x = Math.PI; cc.position.set(0, -0.16, 0);
+    m.add(s1, s2, cc);
+  } else if (indice === 12) {
+    m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 0), new THREE.MeshPhongMaterial({ color: f.cor, emissive: f.cor, emissiveIntensity: 0.65, flatShading: true }));
+  } else {
+    m = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 10), new THREE.MeshPhongMaterial({ color: f.cor }));
+  }
+  m.position.set(px(pos[0]), 0.5, pz(pos[1]));
+  m.castShadow = true;
+  scene.add(m);
+  return m;
+}
+function limparFrutas() {
+  for (const f of J.frutas) scene.remove(f.mesh);
+  J.frutas = [];
+}
+function posLivre() {
+  const j = J.jogadores[0];
+  for (let t = 0; t < 600; t++) {
+    const c = Math.floor(Math.random() * COL), r = Math.floor(Math.random() * ROW);
+    if (emParede([c, r])) continue;
+    if (emCorpo([c, r], j)) continue;
+    if (J.frutas.some(f => f.pos[0] === c && f.pos[1] === r)) continue;
+    if (J.gaviao && J.gaviao.pos[0] === c && J.gaviao.pos[1] === r) continue;
+    return [c, r];
+  }
+  return null;
+}
+function pousarFrutas() {
+  const dif = DIFICULDADES[J.dificuldade];
+  while (J.frutas.length < 3) {
+    let indice;
+    if (Math.random() < dif.especial) indice = 10 + Math.floor(Math.random() * 2);
+    else indice = Math.floor(Math.random() * 10);
+    const pos = posLivre();
+    if (!pos) break;
+    J.frutas.push({ pos, indice, mesh: criarMeshFruta(indice, pos) });
+  }
+  if (J.gaviao && !J.frutas.some(f => f.indice === 12)) {
+    const pos = posLivre();
+    if (pos) J.frutas.push({ pos, indice: 12, mesh: criarMeshFruta(12, pos) });
+  }
+}
+function emParede(cel) { return J.parede.some(p => p[0] === cel[0] && p[1] === cel[1]); }
+function emCorpo(cel, jogador) { return jogador.corpo.some(s => s[0] === cel[0] && s[1] === cel[1]); }
+function criarParede() {
+  let c0 = 4 + Math.floor(Math.random() * (COL - 9));
+  let r0 = 4 + Math.floor(Math.random() * (ROW - 9));
+  const blocks = [];
+  if (Math.random() < 0.5) {
+    for (let i = 0; i < 3; i++) blocks.push([c0 + i, r0]);
+    blocks.push([c0 + 2, r0 - 1]);
+    blocks.push([c0 + 2, r0 - 2]);
+  } else {
+    for (let i = 0; i < 3; i++) blocks.push([c0, r0 + i]);
+    blocks.push([c0 - 1, r0 + 2]);
+    blocks.push([c0 - 2, r0 + 2]);
+  }
+  const j = J.jogadores[0];
+  const ok = blocks.every(p => !emCorpo(p, j) && !(p[0] >= 2 && p[0] <= 8 && p[1] >= 8 && p[1] <= 12));
+  if (ok) J.parede = blocks;
+  else { for (let t = 0; t < 5; t++) { c0 = 4 + Math.floor(Math.random() * (COL - 9)); r0 = 4 + Math.floor(Math.random() * (ROW - 9)); } criarParede(); }
+}
+function criarGaviao() {
+  const cantos = [[1, 1], [COL - 2, 1], [1, ROW - 2], [COL - 2, ROW - 2]];
+  const j = J.jogadores[0];
+  for (const c of cantos) {
+    if (!emCorpo(c, j)) {
+      J.gaviao = { pos: c.slice(), passos: 0 };
+      J.mensagem = "O GAVIAO apareceu!";
+      return;
+    }
+  }
+}
+function atualizarObstaculos() {
+  const dif = DIFICULDADES[J.dificuldade];
+  const j = J.jogadores[0];
+  const tam = j.corpo.length;
+  if (!J.parede.length && tam >= dif.parede) criarParede();
+  if (!J.gaviao && tam >= dif.gaviao) {
+    if (J.gaviao_espera > 0) J.gaviao_espera -= 1;
+    else criarGaviao();
+  }
+  pousarFrutas();
+}
+function moverObstaculos() {
+  const j = J.jogadores[0];
+  if (!J.gaviao || !j.vivo) return;
+  J.gaviao.passos += 1;
+  if (J.gaviao.passos % 2 !== 0) return;
+  const [hc, hr] = j.corpo[0];
+  let c = J.gaviao.pos[0], r = J.gaviao.pos[1];
+  if (hc > c) c++; else if (hc < c) c--; else if (hr > r) r++; else if (hr < r) r--;
+  if (c >= 0 && c < COL && r >= 0 && r < ROW && !emParede([c, r]) && !emCorpo([c, r], j)) {
+    J.gaviao.pos = [c, r];
+  }
+  if (c === hc && r === hr) matarSnake(j, "foi pego pelo gaviao");
+}
+function comerFruta(jogador, i) {
+  const f = J.frutas[i];
+  const fruta = FRUTAS[f.indice];
+  J.frutas.splice(i, 1);
+  scene.remove(f.mesh);
+  if (fruta.especial === "bonus") {
+    jogador.pontos += 150; jogador.crescer += 1;
+    J.mensagem = "BONUS DOURADO! +150";
+    somBonus();
+  } else if (fruta.especial === "coracao") {
+    if (jogador.vidas < 5) jogador.vidas += 1;
+    J.mensagem = "Coracao! +1 vida";
+    somCoracao();
+  } else if (fruta.especial === "master") {
+    jogador.pontos += 100;
+    J.gaviao = null;
+    J.gaviao_espera = Math.round(10000 / DIFICULDADES[J.dificuldade].velocidade);
+    J.mensagem = "MASTER! O gaviao fugiu";
+    somMaster();
+  } else {
+    jogador.pontos += fruta.pontos;
+    jogador.crescer += fruta.crescimento;
+    J.mensagem = fruta.nome + " +" + fruta.pontos;
+    somComer();
+  }
+  pousarFrutas();
+  atualizarHUD();
+}
+function matarSnake(jogador, motivo) {
+  if (!jogador.vivo) return;
+  jogador.vidas -= 1;
+  somMorte();
+  J.mensagem = jogador.nome + " " + motivo + "! Vidas: " + jogador.vidas;
+  atualizarHUD();
+  if (jogador.vidas <= 0) {
+    jogador.vivo = false;
+    J.estado = "fim";
+    pararPassos();
+    mostrarFim(motivo);
+  } else {
+    jogador.corpo = [[5,10],[4,10],[3,10],[2,10]];
+    jogador.dir = [1, 0];
+    jogador.crescer = 0;
+  }
+}
+function passo() {
+  const jogador = J.jogadores[0];
+  if (!jogador.vivo) return;
+  const d = jogador.dir;
+  const nova = [jogador.corpo[0][0] + d[0], jogador.corpo[0][1] + d[1]];
+  if (nova[0] < 0 || nova[0] >= COL || nova[1] < 0 || nova[1] >= ROW) { matarSnake(jogador, "bateu na borda"); return; }
+  if (emParede(nova)) { matarSnake(jogador, "bateu na parede"); return; }
+  if (emCorpo(nova, jogador)) { matarSnake(jogador, "se mordeu"); return; }
+  jogador.corpo.unshift(nova);
+  if (jogador.crescer > 0) jogador.crescer -= 1;
+  else jogador.corpo.pop();
+  const i = J.frutas.findIndex(f => f.pos[0] === nova[0] && f.pos[1] === nova[1]);
+  if (i >= 0) comerFruta(jogador, i);
+  moverObstaculos();
+  atualizarObstaculos();
+  atualizarHUD();
+}
+let timer = null;
+function comecarPassos() { pararPassos(); timer = setInterval(passo, DIFICULDADES[J.dificuldade].velocidade); }
+function pararPassos() { if (timer) { clearInterval(timer); timer = null; } }
+
+const el = {};
+function $id(id) { if (!el[id]) el[id] = document.getElementById(id); return el[id]; }
+function vidasHtml(v) {
+  let s = "";
+  for (let i = 0; i < 5; i++) s += i < v ? "<span style='color:#ef5350'>♥</span>" : "<span style='color:#3a4a7a'>♡</span>";
+  return s;
+}
+function atualizarHUD() {
+  const j = J.jogadores[0];
+  $id("vidas").innerHTML = vidasHtml(j.vidas);
+  $id("pontos").textContent = j.pontos;
+  $id("mensagem").textContent = J.mensagem;
+}
+function lerRecorde() { return parseInt(localStorage.getItem(REC_KEY) || "0", 10); }
+function mostrarFim(motivo) {
+  const j = J.jogadores[0];
+  $id("fim-motivo").textContent = motivo;
+  $id("fim-score").textContent = j.pontos;
+  let novo = false;
+  if (j.pontos > lerRecorde()) {
+    localStorage.setItem(REC_KEY, String(j.pontos));
+    novo = true;
+    somVitoria();
+  }
+  $id("fim-novo").classList.toggle("escondido", !novo);
+  $id("fim-recorde").textContent = "Recorde: " + lerRecorde();
+  $id("fim").classList.remove("escondido");
+}
+function iniciarJogo(dificuldade) {
+  J = { estado: "jogando", dificuldade, jogadores: [novoJogador()], parede: [], gaviao: null, gaviao_espera: 0, frutas: [], mensagem: "Boa sorte!" };
+  limparFrutas();
+  for (const m of segPool) m.visible = false;
+  for (const m of paredePool) m.visible = false;
+  gaviaoGroup.visible = false;
+  pousarFrutas();
+  atualizarHUD();
+  $id("menu").classList.add("escondido");
+  $id("fim").classList.add("escondido");
+  comecarPassos();
+}
+function voltarMenu() {
+  pararPassos();
+  J.estado = "menu";
+  $id("menu").classList.remove("escondido");
+  $id("fim").classList.add("escondido");
+  $id("menu-recorde").textContent = "Recorde: " + lerRecorde();
+  limparFrutas();
+  for (const m of segPool) m.visible = false;
+  for (const m of paredePool) m.visible = false;
+  gaviaoGroup.visible = false;
+}
+function pausar() {
+  if (J.estado === "jogando") {
+    J.estado = "pausa";
+    pararPassos();
+    $id("pausa").classList.remove("escondido");
+  } else if (J.estado === "pausa") {
+    J.estado = "jogando";
+    $id("pausa").classList.add("escondido");
+    comecarPassos();
+  }
+}
+function definirDirecao(d) {
+  const j = J.jogadores[0];
+  if (!j.vivo || J.estado !== "jogando") return;
+  if (d[0] === -j.dir[0] && d[1] === -j.dir[1]) return;
+  j.dir = d;
+}
+
+let audioCtx = null;
+function obterAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+function beep(freq, dur, tipo, ganho, quando) {
+  const ctx = obterAudio();
+  const t0 = ctx.currentTime + (quando || 0);
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = tipo || "sine";
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(ganho || 0.12, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + dur + 0.02);
+}
+function somComer() { beep(620, 0.08, "sine", 0.1); beep(930, 0.1, "sine", 0.09, 0.06); }
+function somBonus() { [523, 659, 784].forEach((f, i) => beep(f, 0.12, "triangle", 0.12, i * 0.08)); }
+function somCoracao() { beep(392, 0.14, "sine", 0.12); beep(523, 0.18, "sine", 0.12, 0.1); }
+function somMaster() { [659, 830, 988, 1319].forEach((f, i) => beep(f, 0.1, "triangle", 0.12, i * 0.07)); }
+function somMorte() { beep(300, 0.35, "sawtooth", 0.14); beep(180, 0.5, "sawtooth", 0.12, 0.25); }
+function somVitoria() { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.15, "triangle", 0.13, i * 0.12)); }
+let passoMusica = 0, timerMusica = null, musicaAtiva = false;
+function construirMusica() {
+  const seq = [];
+  const add = (n, p) => seq.push([n, p]);
+  add("C",2); add("E",1); add("G",1); add("c",2); add("B",1); add("G",1);
+  add("Ab",2); add("B",2); add("C",2); add("G",1); add("E",1); add("F",2);
+  add("E",2); add("D",2); add("E",2); add("C",2); add("G",1); add("Ab",1);
+  add("B",2); add("C",2); add("D",2); add("E",2); add("F",2); add("E",1);
+  add("D",1); add("C",2); add("G",1); add("Ab",1); add("B",2); add("C",4);
+  return seq;
+}
+const NOTAS = { C: 261.63, D: 293.66, E: 329.63, F: 349.23, G: 392.0, Ab: 415.3, A: 440.0, B: 493.88, c: 523.25, d: 587.33, e: 659.25, f: 698.46, g: 784.0, a: 880.0 };
+const BEAT = 340;
+const SEQUENCIA = construirMusica();
+function tocarPassoMusica() {
+  if (!musicaAtiva) return;
+  const [nota, passos] = SEQUENCIA[passoMusica];
+  if (nota !== "x") beep(NOTAS[nota], BEAT / 1000 * 0.9, "triangle", 0.05);
+  passoMusica = (passoMusica + 1) % SEQUENCIA.length;
+  timerMusica = setTimeout(tocarPassoMusica, BEAT * passos);
+}
+function iniciarMusica() {
+  if (musicaAtiva) return;
+  musicaAtiva = true;
+  obterAudio();
+  passoMusica = 0;
+  timerMusica = setTimeout(tocarPassoMusica, 100);
+}
+
+let camAlvo = new THREE.Vector3(0, 16, 14);
+const tmpV = new THREE.Vector3();
+function atualizarCamera() {
+  const j = J.jogadores[0];
+  const cabeca = j.corpo[0];
+  const hx = px(cabeca[0]), hz = pz(cabeca[1]);
+  const d = j.dir;
+  const back = [-d[0], -d[1]];
+  let tx = hx + back[0] * 11, tz = hz + back[1] * 11;
+  tx = Math.max(-12, Math.min(12, tx));
+  tz = Math.max(-12, Math.min(12, tz));
+  camAlvo.set(tx, 9.5, tz);
+  tmpV.copy(camera.position);
+  camera.position.lerp(camAlvo, 0.08);
+  if (camera.position.distanceTo(camAlvo) > 0.01) camera.lookAt(hx, 0.4, hz);
+  else camera.lookAt(hx, 0.4, hz);
+}
+function sincronizar() {
+  const j = J.jogadores[0];
+  for (let i = 0; i < segPool.length; i++) {
+    const m = segPool[i];
+    if (i < j.corpo.length) {
+      const p = j.corpo[i];
+      m.visible = true;
+      m.position.set(px(p[0]), 0.5 + Math.sin(i * 0.4) * 0.03, pz(p[1]));
+    } else m.visible = false;
+  }
+  for (let i = 0; i < paredePool.length; i++) {
+    const m = paredePool[i];
+    if (i < J.parede.length) {
+      const p = J.parede[i];
+      m.visible = true;
+      m.position.set(px(p[0]), 0.5, pz(p[1]));
+    } else m.visible = false;
+  }
+  gaviaoGroup.visible = !!J.gaviao;
+  if (J.gaviao) {
+    const [hc, hr] = j.corpo[0];
+    const gx = px(J.gaviao.pos[0]), gz = pz(J.gaviao.pos[1]);
+    gaviaoGroup.position.set(gx, 1.2 + Math.sin(performance.now() / 180) * 0.15, gz);
+    gaviaoGroup.rotation.y = Math.atan2(hx_ = hc - J.gaviao.pos[0], hz_ = hr - J.gaviao.pos[1]);
+  }
+}
+let hx_, hz_;
+function animar() {
+  requestAnimationFrame(animar);
+  const t = performance.now() / 1000;
+  for (const f of J.frutas) {
+    f.mesh.rotation.y += 0.05;
+    f.mesh.position.y = 0.5 + Math.sin(t * 2 + f.pos[0] * 0.7) * 0.12;
+  }
+  sincronizar();
+  atualizarCamera();
+  renderer.render(scene, camera);
+}
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function iniciar() {
+  montarCena();
+  onResize();
+  window.addEventListener("resize", onResize);
+  $id("menu-recorde").textContent = "Recorde: " + lerRecorde();
+  document.querySelectorAll("[data-dificuldade]").forEach(b => {
+    b.addEventListener("click", () => {
+      selDificuldade = b.dataset.dificuldade;
+      document.querySelectorAll("[data-dificuldade]").forEach(o => o.classList.toggle("ativo", o === b));
+    });
+  });
+  $id("btn-jogar").addEventListener("click", () => { obterAudio(); iniciarMusica(); iniciarJogo(selDificuldade); });
+  $id("btn-pausa").addEventListener("click", pausar);
+  $id("btn-continuar").addEventListener("click", pausar);
+  $id("btn-reiniciar").addEventListener("click", () => { obterAudio(); iniciarMusica(); iniciarJogo(J.dificuldade); });
+  $id("btn-menu-fim").addEventListener("click", voltarMenu);
+  window.addEventListener("keydown", (e) => {
+    const teclas = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0], w: [0,-1], s: [0,1], a: [-1,0], d: [1,0], W: [0,-1], S: [0,1], A: [-1,0], D: [1,0] };
+    if (teclas[e.key]) { e.preventDefault(); definirDirecao(teclas[e.key]); }
+    if (e.key === "p" || e.key === "P" || e.key === "Escape") pausar();
+  });
+  const dpad = { "b-cima": [0,-1], "b-baixo": [0,1], "b-esq": [-1,0], "b-dir": [1,0] };
+  for (const id in dpad) {
+    $id(id).addEventListener("pointerdown", (e) => { e.preventDefault(); definirDirecao(dpad[id]); });
+  }
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  atualizarHUD();
+  animar();
+}
+window.addEventListener("load", iniciar);
+</script>
+</body>
+</html>
