@@ -252,7 +252,8 @@
       Controles: P1 = WASD / toque e arraste &nbsp;|&nbsp; P2 = Setas / D-pad<br>
       P = pausar &nbsp;|&nbsp; R = reiniciar &nbsp;|&nbsp; M = menu &nbsp;|&nbsp; S = som<br>
       No celular: toque no tabuleiro e arraste (joystick) para mover a cobra.<br>
-      Cada jogador tem 5 vidas. Come coracoes para ganhar +1 vida.
+      Cada jogador tem 5 vidas. Come coracoes para ganhar +1 vida.<br>
+      Quando o GAVIAO aparecer, coma o alimento MASTER para ele fugir por 10s!
     </div>
 
     <div id="quadro-recordes">
@@ -305,9 +306,9 @@ const COR_CABECA_P2 = "#2962ff";
 const COR_CABECA_CYBORG = "#cfd8dc";
 
 const DIFICULDADES = {
-  "Facil":   { velocidade: 170, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 4 },
-  "Media":   { velocidade: 140, parede: 6,  gaviao: 10, escorpiao: 14, dragao: 18, especial: 0.30, gaviao_intervalo: 3 },
-  "Dificil": { velocidade: 105, parede: 4,  gaviao: 7,  escorpiao: 10, dragao: 13, especial: 0.40, gaviao_intervalo: 2 },
+  "Facil":   { velocidade: 170, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 8 },
+  "Media":   { velocidade: 140, parede: 6,  gaviao: 10, escorpiao: 14, dragao: 18, especial: 0.30, gaviao_intervalo: 6 },
+  "Dificil": { velocidade: 105, parede: 4,  gaviao: 7,  escorpiao: 10, dragao: 13, especial: 0.40, gaviao_intervalo: 5 },
 };
 
 const MODOS = [
@@ -431,6 +432,7 @@ function somBonus() { beep(1100, 70, "square", 0.10); setTimeout(() => beep(1320
 function somVeneno() { beep(180, 120, "sawtooth", 0.12); }
 function somCoracao() { beep(660, 80, "sine", 0.14); setTimeout(() => beep(990, 90, "sine", 0.12), 100); }
 function somMorte() { beep(220, 200, "sawtooth", 0.12); setTimeout(() => beep(150, 250, "sawtooth", 0.12), 230); }
+function somMaster() { [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => beep(f, 90, "square", 0.11), i * 90)); }
 function somVitoria() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 100, "square", 0.10), i * 110)); }
 
 // ---------- Frutas ----------
@@ -558,6 +560,27 @@ function desenharCoracao(ctx, x, y) {
   ctx.beginPath(); ctx.arc(x + 16, y + 10, 5.5, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.moveTo(x + 4, y + 13); ctx.lineTo(x + 21, y + 13); ctx.lineTo(x + 12.5, y + 26); ctx.closePath(); ctx.fill();
 }
+function desenharMaster(ctx, x, y) {
+  ctx.save();
+  ctx.shadowColor = "#fbbf24"; ctx.shadowBlur = 12;
+  ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#b45309";
+  ctx.beginPath(); ctx.arc(x + 15, y + 15, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = "#78350f";
+  ctx.beginPath(); ctx.arc(x + 15, y + 15, 9, 0, Math.PI * 2); ctx.fill();
+  const cx = x + 15, cy = y + 15;
+  ctx.fillStyle = "#fffbeb";
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? 7.5 : 3;
+    const a = (Math.PI / 5) * i - Math.PI / 2;
+    const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#d97706";
+  ctx.beginPath(); ctx.arc(cx, cy, 1.8, 0, Math.PI * 2); ctx.fill();
+}
 
 const FRUTAS = [
   { nome: "Maca",       pontos: 25,  crescimento: 1, cor: "#e53935", especial: null,      desenhar: desenharMaca },
@@ -573,6 +596,7 @@ const FRUTAS = [
   { nome: "Bonus Dourado", pontos: 150, crescimento: 1, cor: "#ffd600", especial: "bonus",   desenhar: desenharEstrela },
   { nome: "Veneno",     pontos: -50, crescimento: 0, cor: "#7e57c2", especial: "veneno",   desenhar: desenharVeneno },
   { nome: "Coracao",    pontos: 0,   crescimento: 0, cor: "#ef5350", especial: "coracao",  desenhar: desenharCoracao },
+  { nome: "Master",     pontos: 100, crescimento: 0, cor: "#fbbf24", especial: "master",   desenhar: desenharMaster },
 ];
 const INDICES_NORMAIS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -581,6 +605,7 @@ function descricaoFruta(indice) {
   if (f.especial === "bonus") return "Bonus +150";
   if (f.especial === "veneno") return "Veneno";
   if (f.especial === "coracao") return "Coracao +vida";
+  if (f.especial === "master") return "Master (afasta o gaviao)";
   return f.nome + "(+" + f.pontos + ")";
 }
 
@@ -627,7 +652,7 @@ function iniciarJogo() {
   J = {
     modo: cfg.modo, dificuldade: cfg.dificuldade, som: cfg.som,
     jogadores: [p1],
-    frutas: [], parede: [], gaviao: null, gaviao_passos: 0,
+    frutas: [], parede: [], gaviao: null, gaviao_passos: 0, gaviao_espera: 0,
     escorpiao: null, dragaoCorpo: [], dragaoPassos: 0,
     mensagem: "", estado: "jogando",
     abertura_ativa: true, tempoAbertura: 0,
@@ -684,6 +709,14 @@ function pousarFrutas() {
     else indice = INDICES_NORMAIS[Math.floor(Math.random() * INDICES_NORMAIS.length)];
     J.frutas.push({ pos: pos, indice: indice });
   }
+  if (J.gaviao && !J.frutas.some(f => FRUTAS[f.indice].especial === "master")) {
+    const livres = [];
+    for (let c = 0; c < COLUNAS; c++) for (let r = 0; r < LINHAS; r++) if (celulaLivre(c, r)) livres.push([c, r]);
+    if (livres.length) {
+      const pos = livres[Math.floor(Math.random() * livres.length)];
+      J.frutas.push({ pos: pos, indice: FRUTAS.findIndex(f => f.especial === "master") });
+    }
+  }
 }
 function comprimentoMaximo() {
   let m = 0;
@@ -717,6 +750,7 @@ function criarGaviao() {
   J.gaviao = melhor;
   J.gaviao_passos = 0;
   J.mensagem = "O GAVIAO apareceu!";
+  pousarFrutas();
   atualizarHud();
 }
 function criarEscorpiao() {
@@ -746,7 +780,10 @@ function atualizarObstaculos() {
   const dif = DIFICULDADES[J.dificuldade];
   const tam = comprimentoMaximo();
   if (!J.parede.length && tam >= dif.parede) criarParede();
-  if (!J.gaviao && tam >= dif.gaviao) criarGaviao();
+  if (!J.gaviao && tam >= dif.gaviao) {
+    if (J.gaviao_espera > 0) J.gaviao_espera -= 1;
+    else criarGaviao();
+  }
   if (!J.escorpiao && tam >= dif.escorpiao) criarEscorpiao();
   if (!J.dragaoCorpo.length && tam >= dif.dragao) criarDragao();
 }
@@ -1025,6 +1062,13 @@ function comerFruta(jogador, i) {
     jogador.vidas = Math.min(jogador.vidas + 1, 5);
     J.mensagem = jogador.nome + " ganhou +1 VIDA!";
     somCoracao();
+  } else if (fruta.especial === "master") {
+    jogador.pontos += 100;
+    J.mensagem = jogador.nome + " comeu o MASTER! O GAVIAO fugiu (volta em 10s)";
+    somMaster();
+    J.gaviao = null;
+    J.gaviao_passos = 0;
+    J.gaviao_espera = Math.round(10000 / DIFICULDADES[J.dificuldade].velocidade);
   } else {
     jogador.pontos += fruta.pontos;
     jogador.crescer += fruta.crescimento;
