@@ -306,9 +306,9 @@ const COR_CABECA_P2 = "#2962ff";
 const COR_CABECA_CYBORG = "#cfd8dc";
 
 const DIFICULDADES = {
-  "Facil":   { velocidade: 250, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 8 },
-  "Media":   { velocidade: 140, parede: 6,  gaviao: 10, escorpiao: 14, dragao: 18, especial: 0.30, gaviao_intervalo: 6 },
-  "Dificil": { velocidade: 105, parede: 4,  gaviao: 7,  escorpiao: 10, dragao: 13, especial: 0.40, gaviao_intervalo: 5 },
+  "Facil":   { velocidade: 300, parede: 8,  gaviao: 12, escorpiao: 16, dragao: 20, especial: 0.20, gaviao_intervalo: 8 },
+  "Media":   { velocidade: 180, parede: 6,  gaviao: 10, escorpiao: 14, dragao: 18, especial: 0.30, gaviao_intervalo: 6 },
+  "Dificil": { velocidade: 140, parede: 4,  gaviao: 7,  escorpiao: 10, dragao: 13, especial: 0.40, gaviao_intervalo: 5 },
 };
 
 const MODOS = [
@@ -678,6 +678,7 @@ function iniciarJogo() {
     desenhar();
   }
   tickTimer = setInterval(passo, DIFICULDADES[cfg.dificuldade].velocidade);
+  ativarDpads();
 }
 
 // ---------- Lógica ----------
@@ -907,6 +908,7 @@ function fimDeJogo(pontos, motivo, vencedor) {
   atualizarHud();
   desenhar();
   atualizarBotoesFim();
+  ativarDpads();
 }
 
 function atualizarBotoesFim() {
@@ -1307,6 +1309,7 @@ function animarAbertura(tempo) {
     J.estado = "jogando";
     atualizarHud();
     desenhar();
+    ativarDpads();
     return;
   }
   if (tempo >= baseContagem + 900) {
@@ -1430,6 +1433,7 @@ function mostrarTelaMenu() {
   el.telaMenu.style.display = "flex";
   atualizarBotoesFim();
   atualizarPlacar();
+  ativarDpads();
 }
 function mostrarTelaJogo() {
   el.telaMenu.style.display = "none";
@@ -1448,6 +1452,7 @@ document.addEventListener("keydown", (ev) => {
   if (key === "p" || key === "P") {
     if (J && J.estado === "jogando") { J.estado = "pausado"; desenhar(); }
     else if (J && J.estado === "pausado") { J.estado = "jogando"; }
+    ativarDpads();
     ev.preventDefault();
     return;
   }
@@ -1464,7 +1469,7 @@ document.addEventListener("keydown", (ev) => {
     ev.preventDefault();
     return;
   }
-  if (J && J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); return; }
+  if (J && J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); ativarDpads(); return; }
   const d = DIR_TECLAS[key];
   if (d) {
     ev.preventDefault();
@@ -1483,7 +1488,7 @@ document.addEventListener("keydown", (ev) => {
 let toqueInicio = null;
 function handleTouchStart(ev) {
   criarAudio();
-  if (J && J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); return; }
+  if (J && J.estado === "abertura") { J.estado = "jogando"; atualizarHud(); desenhar(); ativarDpads(); return; }
   const t = ev.changedTouches[0];
   toqueInicio = { x: t.clientX, y: t.clientY };
 }
@@ -1533,9 +1538,9 @@ function construirDpads() {
   criar(el.dpad2, 1, { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] });
 }
 function ativarDpads() {
-  const temJogo = J && J.jogadores.length;
-  const mostrar2 = temJogo && J.modo === "2jogadores";
-  const mostrar1 = temJogo && J.modo !== "2jogadores";
+  const jogando = J && J.jogadores.length && J.estado === "jogando";
+  const mostrar2 = jogando && J.modo === "2jogadores";
+  const mostrar1 = jogando && J.modo !== "2jogadores";
   el.dpad1.style.visibility = mostrar1 ? "visible" : "hidden";
   el.dpad2.style.visibility = mostrar2 ? "visible" : "hidden";
 }
