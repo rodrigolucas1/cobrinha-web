@@ -86,6 +86,19 @@
     margin-top: 12px;
   }
   .btn-jogar:active { transform: scale(0.98); }
+  .btn-sair {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .btn-sair:active { transform: scale(0.98); }
   .ajuda { color: #94a3b8; font-size: 11px; text-align: center; margin-top: 10px; line-height: 1.5; }
   #quadro-recordes {
     border: 1px solid #16a34a;
@@ -151,6 +164,8 @@
   #btn-reiniciar:active { background: #15803d; }
   #btn-menu-fim { background: #334155; }
   #btn-menu-fim:active { background: #1e293b; }
+  #btn-sair-fim { background: #dc2626; }
+  #btn-sair-fim:active { background: #b91c1c; }
   #area-canvas {
     flex: 1;
     display: flex;
@@ -247,6 +262,7 @@
     </div>
 
     <button class="btn-jogar" id="btn-jogar">JOGAR</button>
+    <button class="btn-sair" id="btn-sair">&#10006; SAIR</button>
 
     <div class="ajuda">
       Controles: P1 = WASD / toque e arraste &nbsp;|&nbsp; P2 = Setas / D-pad<br>
@@ -278,6 +294,7 @@
   <div id="botoes-fim" style="display:none">
     <button id="btn-reiniciar" class="btn-fim">&#8635; REINICIAR</button>
     <button id="btn-menu-fim" class="btn-fim">&#9776; MENU</button>
+    <button id="btn-sair-fim" class="btn-fim">&#10006; SAIR</button>
   </div>
   <div id="dpads">
     <div class="dpad" id="dpad1"></div>
@@ -1439,6 +1456,9 @@ function mostrarTelaJogo() {
   el.telaMenu.style.display = "none";
   el.telaJogo.style.display = "flex";
 }
+function sairJogo() {
+  if (typeof window !== "undefined" && window.location) window.location.reload();
+}
 
 // ---------- Controles (teclado) ----------
 const DIR_TECLAS = {
@@ -1617,12 +1637,12 @@ window.addEventListener("load", () => {
     opcoesModo: $("opcoes-modo"), opcoesDificuldade: $("opcoes-dificuldade"),
     nome1: $("nome1"), nome2: $("nome2"),
     rotuloNome1: $("rotulo-nome1"), rotuloNome2: $("rotulo-nome2"),
-    ckSom: $("ck-som"), btnJogar: $("btn-jogar"),
+    ckSom: $("ck-som"), btnJogar: $("btn-jogar"), btnSair: $("btn-sair"),
     listaRecordes: $("lista-recordes"), btnLimpar: $("btn-limpar"),
     hudJogadores: $("hud-jogadores"), hudFrutas: $("hud-frutas"), hudObs: $("hud-obs"),
     mensagem: $("mensagem"),
     dpad1: $("dpad1"), dpad2: $("dpad2"),
-    botoesFim: $("botoes-fim"), btnReiniciar: $("btn-reiniciar"), btnMenuFim: $("btn-menu-fim"),
+    botoesFim: $("botoes-fim"), btnReiniciar: $("btn-reiniciar"), btnMenuFim: $("btn-menu-fim"), btnSairFim: $("btn-sair-fim"),
     areaCanvas: $("area-canvas"), joystick: $("joystick"), joyKnob: $("joy-knob"),
     dicaToque: $("dica-toque"),
     rodapeEsq: $("rodape-esq"), rodapeDir: $("rodape-dir"),
@@ -1638,6 +1658,8 @@ window.addEventListener("load", () => {
   el.btnLimpar.addEventListener("click", limparPlacar);
   el.btnReiniciar.addEventListener("click", () => { criarAudio(); if (J) { J.abertura_ativa = false; iniciarJogo(); } });
   el.btnMenuFim.addEventListener("click", () => { criarAudio(); mostrarTelaMenu(); });
+  el.btnSair.addEventListener("click", sairJogo);
+  el.btnSairFim.addEventListener("click", sairJogo);
   el.nome1.addEventListener("input", atualizarPlacar);
   el.nome2.addEventListener("input", atualizarPlacar);
   el.areaCanvas.addEventListener("touchstart", areaCanvasTouchStart, { passive: false });
